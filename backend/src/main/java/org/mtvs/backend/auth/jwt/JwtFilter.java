@@ -14,12 +14,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
 
 @Slf4j
+@Component
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
@@ -83,7 +85,6 @@ public class JwtFilter extends OncePerRequestFilter {
         } else {
             log.info("[JWT 필터] Authorization 헤더 토큰 없음 - 인증 없이 계속 진행");
         }
-
         chain.doFilter(request, response);
     }
 }
