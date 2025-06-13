@@ -1,19 +1,20 @@
 package org.mtvs.backend.user.entity;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
+import lombok.*;
 import org.mtvs.backend.global.entity.BaseEntity;
+import java.util.UUID;
 
-import java.util.ArrayList;
-import java.util.List;
-
+@Entity
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "users")
 public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+    private UUID id;
 
     @Column(unique = true, nullable = false)
     private String username;
@@ -24,13 +25,19 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private String password;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String roles;
+    private Role role;
 
-    public User(String email, String password, String username) {
+    public enum Role {
+        USER, ADMIN, GUEST
+    }
+
+    public User(String username, String email, String password, Role role) {
+        this.username = username;
         this.email = email;
         this.password = password;
-        this.username = username;
-        this.roles = "ROLE_USER";
+        this.role = role;
     }
+    
 }

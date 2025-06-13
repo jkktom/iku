@@ -1,6 +1,8 @@
 package org.mtvs.backend.global.config;
 
+import org.mtvs.backend.auth.jwt.JwtFilter;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -14,9 +16,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+@Configuration
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+
+    public SecurityConfig(JwtFilter jwtFilter) {
+        this.jwtFilter = jwtFilter;
+    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -29,18 +36,18 @@ public class SecurityConfig {
                 "http://127.0.0.1:*",
 
                 // Production domains
-                "https://*.shaunthesheep.store",
-                "https://shaunthesheep.store",
-                "https://api.shaunthesheep.store",
-                "https://dev.shaunthesheep.store",
-                "https://dev-api.shaunthesheep.store",
+                "https://*.iku.life",
+                "https://iku.life",
+                "https://api.iku.life",
+                "https://dev.iku.life",
+                "https://dev-api.iku.life",
                 "http://localhost:3000",
                 "http://localhost:8080",
 
                 // Vercel deployment domains
                 "https://*.vercel.app",
-                "https://shaun-the-sheep-ai.vercel.app",
-                "https://shaun-the-sheep-ai-*.vercel.app"
+                "https://iku-ghost-ai.vercel.app",
+                "https://iku-ghost-ai-*.vercel.app"
         );
 
         config.setAllowedOriginPatterns(allowedOrigins);

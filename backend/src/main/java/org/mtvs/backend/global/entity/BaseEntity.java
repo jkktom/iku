@@ -28,4 +28,12 @@ public abstract class BaseEntity {
     public void inactive() {
         this.deletedAt = LocalDateTime.now();
     }
+
+    public boolean isActive() {
+        return deletedAt == null;
+    }
+
+    public void activate() {
+        this.deletedAt = null;
+    }
 }

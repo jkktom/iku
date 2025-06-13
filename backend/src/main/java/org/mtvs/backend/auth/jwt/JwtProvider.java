@@ -21,8 +21,8 @@ public class JwtProvider {
     /*
      * JWT 생성
      * */
-    public String generateToken(String email) {
-        log.info("[JWT 생성] 이메일 : {}", email);
+    public String generateToken(String username) {
+        log.info("[JWT 생성] 이메일 : {}", username);
 
         Date now = new Date();
         Date expiry = new Date(now.getTime() + validityInMs);
@@ -31,7 +31,7 @@ public class JwtProvider {
         log.debug("[JWT 생성 완료] 만료시간 : {}", expiry);
 
         return Jwts.builder()
-                .setSubject(email)
+                .setSubject(username)
                 .claim("roles", List.of("ROLE_USER"))
                 .setIssuedAt(now)
                 .setExpiration(expiry)
@@ -42,21 +42,21 @@ public class JwtProvider {
     /*
      * JWT에서 이메일 추출
      * */
-    public String getEmailFromToken(String token) {
+    public String getUsernameFromToken(String token) {
         token = cleanToken(token);
         log.debug("[JWT 파싱] 이메일 추출 시작");
 
         Key key = Keys.hmacShaKeyFor(secretKey.getBytes());
 
-        String email = Jwts.parserBuilder()
+        String username = Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
 
-        log.debug("[JWT 파싱 완료] 이메일: {}", email);
-        return email;
+        log.debug("[JWT 파싱 완료] 이메일: {}", username);
+        return username;
     }
 
     /*

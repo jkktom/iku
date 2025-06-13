@@ -5,8 +5,11 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.mtvs.backend.auth.security.CustomUserDetails;
 import org.mtvs.backend.auth.util.JwtUtil;
 import org.mtvs.backend.user.entity.User;
+import org.mtvs.backend.user.repository.UserRepository;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -16,10 +19,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+@Slf4j
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+
+    public JwtFilter(JwtUtil jwtUtil, UserRepository userRepository) {
+        this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -46,12 +55,12 @@ public class JwtFilter extends OncePerRequestFilter {
                         log.info("[JWT 필터] 게스트 토큰 인증 완료");
                     } else {
                         // Regular user token handling
-                        String email = jwtUtil.getEmail(token);
-                        log.info("[JWT 필터] 토큰 검증 성공 : 이메일={}", email);
+                        String username = jwtUtil.getUsername(token);
+                        log.info("[JWT 필터] 토큰 검증 성공 : Username={}", username);
 
-                        User user = userRepository.findByEmail(email)
+                        User user = userRepository.findByUsername(username)
                                 .orElseThrow(() -> {
-                                    log.warn("[JWT 필터] 사용자 이메일 DB 조회 실패 : {}", email);
+                                    log.warn("[JWT 필터] 사용자 Username DB 조회 실패 : {}", username);
                                     return new RuntimeException("유저 없음");
                                 });
 
@@ -62,8 +71,8 @@ public class JwtFilter extends OncePerRequestFilter {
                         );
 
                         SecurityContextHolder.getContext().setAuthentication(authentication);
-                        log.info("[JWT 필터] SecurityContext 인증 완료 : 사용자 ID={}, 이메일={}",
-                                user.getId(), user.getEmail());
+                        log.info("[JWT 필터] SecurityContext 인증 완료 : 사용자 UUID={}, 사용자 username={}",
+                                user.getId(), user.getUsername());
                     }
                 } else {
                     log.warn("[JWT 필터] 토큰 유효성 검사 실패");
