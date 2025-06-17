@@ -38,3 +38,7 @@ jwt:
   refresh-token-expiration: 604800000 # 7 days (ms)
   guest-token-expiration: 3600000 # 1 hour (ms)
 
+riot:
+  api:
+    key: RGAPI-5f87e4e8-b5c9-4f57-99a7-bfd5bf08b77f #riot API Key
+
