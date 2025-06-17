@@ -20,8 +20,8 @@ public abstract class User {
     @Column(unique = true, nullable = false)
     private String username;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @ManyToOne
+    @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
     @Column(nullable = true)
@@ -33,9 +33,6 @@ public abstract class User {
     @Column(nullable = true)
     private LocalDateTime updatedAt;
 
-    public enum Role {
-        USER, ADMIN, GUEST
-    }
 
     protected User(String email, String username, Role role) {
         this.email = email;
