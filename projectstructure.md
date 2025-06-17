@@ -11,7 +11,7 @@ This document outlines the architecture, technology stack, and deployment strate
   - JPA (Java Persistence API) for ORM
   - PostgreSQL database
 - **Frontend:**
-  - Remix (planned migration from Next.js)
+  - Remix
   - Lightweight, modern, and optimized for free-tier deployment
 
 ---
@@ -26,7 +26,7 @@ This document outlines the architecture, technology stack, and deployment strate
 - **Database:**
   - AWS RDS (PostgreSQL, t2.micro for free tier eligibility)
 - **Frontend Hosting:**
-  - Deploy Remix app to Cloudflare Pages or Vercel (supports free tier, fast global delivery)
+  - Deploy Remix app to Cloudflare Pages
 
 ---
 
