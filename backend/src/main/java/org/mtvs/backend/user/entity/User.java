@@ -2,42 +2,50 @@ package org.mtvs.backend.user.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.mtvs.backend.global.entity.BaseEntity;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
+@MappedSuperclass
 @Getter
-@NoArgsConstructor
-@AllArgsConstructor
-@Table(name = "users")
-public class User extends BaseEntity {
-
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public abstract class User {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(unique = true, nullable = false)
-    private String username;
-
-    @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
-    private String password;
+    @Column(unique = true, nullable = false)
+    private String username;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
 
+    @Column(nullable = true)
+    private String password;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = true)
+    private LocalDateTime updatedAt;
+
     public enum Role {
         USER, ADMIN, GUEST
     }
 
-    public User(String username, String email, String password, Role role) {
-        this.username = username;
+    protected User(String email, String username, Role role) {
         this.email = email;
-        this.password = password;
+        this.username = username;
         this.role = role;
+        this.createdAt = LocalDateTime.now();
     }
-    
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

@@ -31,8 +31,4 @@ public class CustomUserDetails implements UserDetails {
         return List.of(new SimpleGrantedAuthority(user.getRole().name()));
     }
 
-    @Override
-    public boolean isEnabled() {
-        return user.isActive();
-    }
 }
