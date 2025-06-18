@@ -5,11 +5,12 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@MappedSuperclass
+@Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public abstract class User {
-    
+@Table(name = "users")
+public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -20,10 +21,19 @@ public abstract class User {
     @Column(unique = true, nullable = false)
     private String username;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "signup_category_id", nullable = false)
+    private SignupCategory signupCategory;
+
+    // For OAuth users, this is the provider's user ID (e.g., Clerk, Naver)
+    @Column(nullable = true)
+    private String linkingUserId;
+
+    // For local users, this is the password hash
     @Column(nullable = true)
     private String password;
 
@@ -33,11 +43,15 @@ public abstract class User {
     @Column(nullable = true)
     private LocalDateTime updatedAt;
 
-
-    protected User(String email, String username, Role role) {
+    // Main constructor for all users
+    @Builder
+    public User(String email, String username, Role role, SignupCategory signupCategory, String linkingUserId, String password) {
         this.email = email;
         this.username = username;
         this.role = role;
+        this.signupCategory = signupCategory;
+        this.linkingUserId = linkingUserId;
+        this.password = password;
         this.createdAt = LocalDateTime.now();
     }
 
