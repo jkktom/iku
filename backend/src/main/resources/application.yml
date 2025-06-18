@@ -37,3 +37,5 @@ jwt:
   access-token-expiration: 3600000 # 1 hour (ms)
   refresh-token-expiration: 604800000 # 7 days (ms)
   guest-token-expiration: 3600000 # 1 hour (ms)
+clerk:
+  domain: giving-ocelot-59.clerk.accounts.dev
