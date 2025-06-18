@@ -26,9 +26,11 @@ repositories {
 // Version management
 ext {
     jwtVersion = '0.11.5'
+    nimbusVersion = '9.37.3'
     nettyVersion = '4.1.108.Final'
     modelMapperVersion = '3.2.0'
     springDotenvVersion = '4.0.0'
+    clerkVersion = '3.0.3'
 }
 
 dependencies {
@@ -50,6 +52,7 @@ dependencies {
     implementation "io.jsonwebtoken:jjwt-api:${jwtVersion}"
     runtimeOnly "io.jsonwebtoken:jjwt-impl:${jwtVersion}"
     runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jwtVersion}"
+    implementation "com.nimbusds:nimbus-jose-jwt:${nimbusVersion}"
 
     // JSON Processing
     implementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -60,6 +63,7 @@ dependencies {
     // Utilities
     implementation "org.modelmapper:modelmapper:${modelMapperVersion}"
     implementation "me.paulschwarz:spring-dotenv:${springDotenvVersion}"
+    implementation "com.clerk:backend-api:${clerkVersion}"
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
