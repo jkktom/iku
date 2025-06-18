@@ -24,6 +24,7 @@ public class MatchTimelineDto {
                 '}';
     }
 
+    //여러개의 프레임 리스트
     public static class Info{
         private List<Frame> frames;
 
@@ -47,9 +48,9 @@ public class MatchTimelineDto {
     }
 
     public static class Frame{
-        private long timestamp;
-        private Map<String, ParticipantFrame> participantFrames;
-        private List<Event> events;
+        private long timestamp; //프레임의 시간(밀리초)
+        private Map<String, ParticipantFrame> participantFrames; //각 참가자(1~10번)의 상태정보
+        private List<Event> events; //이 프레임에서 발생한 인게임 리스트
 
         public Frame() {
         }
@@ -89,10 +90,10 @@ public class MatchTimelineDto {
     }
 
     public static class ParticipantFrame {
-        private int totalGold;
-        private int level;
-        private int minionsKilled;
-        private int jungleMinionsKilled;
+        private int totalGold; //현재까지 획득한 총 골드
+        private int level; //현재 레벨
+        private int minionsKilled; //라인 미니언 처치 수
+        private int jungleMinionsKilled; //정글 몬스터 처치 수
         private int x; // 위치 정보 (선택적)
         private int y; // 위치 정보 (선택적)
 
@@ -162,19 +163,20 @@ public class MatchTimelineDto {
                     '}';
         }
     }
-
+    // 이벤트 정보
+    // int 대신 Integer로 변경하여 null 처리 가능성 대비
     public static class Event {
-        private String type;
-        private long timestamp;
-        private Integer participantId; // int 대신 Integer로 변경하여 null 처리 가능성 대비
-        private Integer killerId;      // int 대신 Integer로 변경하여 null 처리 가능성 대비
-        private Integer victimId;      // int 대신 Integer로 변경하여 null 처리 가능성 대비
-        private List<Integer> assistingParticipantIds;
-        private String monsterType;
-        private String buildingType;
-        private String laneType;
-        private String towerType;
-        private Integer itemId; // int 대신 Integer로 변경하여 null 처리 가능성 대비
+        private String type; //이벤트의 종류 : ITEM_PURCHASED, CHAMPION_KILL
+        private long timestamp; //이벤트 발생 시각(밀리초)
+        private Integer participantId; //이벤트와 관련된 참가자 ID
+        private Integer killerId; // 킬을 한 참가자 ID
+        private Integer victimId; // 희생된 참가자 ID
+        private List<Integer> assistingParticipantIds; //어시스트한 참가자 ID 리스트
+        private String monsterType; //몬스터 종류(드래곤, 바론 등, 해당 이벤트에 따라 null)
+        private String buildingType; //건물 종류(타워, 억제기 등, 해당 이벤트에 따라 null)
+        private String laneType; //라인 종류(해당 이벤트에 따라 null)
+        private String towerType; //타워 종류(해당 이벤트에 따라 null)
+        private Integer itemId; //아이템 ID(해당 이벤트에 따라 null)
 
         // 기본 생성자
         public Event() {
