@@ -29,13 +29,12 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    public String generateAccessToken(String email, String username, String id) {
+    public String generateAccessToken(String username, String id) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + accessTokenExpiration);
 
         return Jwts.builder()
-                .setSubject(email)
-                .claim("email", email)
+                .setSubject(username)
                 .claim("username", username)
                 .claim("id", id)
                 .setIssuedAt(now)
@@ -62,7 +61,7 @@ public class JwtUtil {
 
         return Jwts.builder()
                 .setSubject("guest")
-                .claim("role", "ROLE_GUEST")
+                .claim("role", "GUEST")
                 .claim("isGuest", true)
                 .setIssuedAt(now)
                 .setExpiration(expiration)
@@ -123,5 +122,4 @@ public class JwtUtil {
             return false;
         }
     }
-
 }
