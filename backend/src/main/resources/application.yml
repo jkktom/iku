@@ -12,7 +12,7 @@ spring:
       maximum-pool-size: 2
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -40,5 +40,5 @@ jwt:
 
 riot:
   api:
-    key: RGAPI-5f87e4e8-b5c9-4f57-99a7-bfd5bf08b77f #riot API Key
+    key: RGAPI-8a09a0c7-30cc-42b0-8d1d-27a06511cdff #riot API Key
 

@@ -87,6 +87,7 @@ public class MatchTimelineDto {
                     '}';
         }
     }
+
     public static class ParticipantFrame {
         private int totalGold;
         private int level;

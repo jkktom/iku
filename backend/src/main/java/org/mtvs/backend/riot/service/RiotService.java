@@ -47,7 +47,7 @@ public class RiotService {
         return restTemplate.exchange(
                 url,
                 HttpMethod.GET,
-                createHttpEntity(), //이게 머지
+                createHttpEntity(),
                 AccountDto.class
         ).getBody();
     }
