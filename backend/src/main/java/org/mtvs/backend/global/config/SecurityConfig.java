@@ -69,29 +69,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/health").permitAll()
-
-                        // Guest endpoints (accessible with guest token)
-                        .requestMatchers("/api/guest/**").hasAnyRole("GUEST", "USER")
-                        .requestMatchers("/api/checklist/guest").hasAnyRole("GUEST", "USER")
-                        .requestMatchers("/api/recommend/guest").hasAnyRole("GUEST", "USER")
-                        .requestMatchers("/api/recommend/diagnoses").hasAnyRole("GUEST", "USER")
-
-                        // Protected endpoints (requires full user authentication)
-                        .requestMatchers("/api/profile").hasRole("USER")
-                        .requestMatchers("/api/naver").hasRole("USER")
-                        .requestMatchers("/api/recommend/**").hasRole("USER")
-                        .requestMatchers("/api/deep/**").hasRole("USER")
-                        .requestMatchers("/api/routine/**").hasRole("USER")
-                        .requestMatchers("/api/user/**").hasRole("USER")
-                        .requestMatchers("/api/chat-messages/ask").hasRole("USER")
-                        .requestMatchers("/api/checklist/**").hasRole("USER")
-
-                        // All other requests require authentication
-                        .anyRequest().authenticated()
+                        // 모든 요청 허용 (테스트용)
+                        .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

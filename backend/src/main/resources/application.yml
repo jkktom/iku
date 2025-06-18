@@ -12,7 +12,7 @@ spring:
       maximum-pool-size: 2
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -39,3 +39,8 @@ jwt:
   guest-token-expiration: 3600000 # 1 hour (ms)
 clerk:
   domain: giving-ocelot-59.clerk.accounts.dev
+
+riot:
+  api:
+    key: RGAPI-8a09a0c7-30cc-42b0-8d1d-27a06511cdff #riot API Key
+
