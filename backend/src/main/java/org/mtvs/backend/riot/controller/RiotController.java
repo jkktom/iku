@@ -44,4 +44,4 @@ public class RiotController {
         return riotService.getMatchTimeline(matchId);
     }
 
-}
+} 

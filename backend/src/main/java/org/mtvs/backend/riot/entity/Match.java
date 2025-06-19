@@ -9,13 +9,13 @@ import java.util.List;
 @Table(name = "matches")
 public class Match {
     @Id
-    private String matchId;
+    private String matchId; //게임 고유 ID
 
-    private long gameDuration;
-    private String gameMode;
-    private String gameVersion;
-    private int queueId;
-    private LocalDateTime gameStartTime;
+    private long gameDuration; //게임 지속 시간 (초)
+    private String gameMode; //게임 모드
+    private String gameVersion; //게임 버전
+    private int queueId; //게임 타입 큐 ID
+    private LocalDateTime gameStartTime; //게임 시작 시간
 
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Participant> participants;

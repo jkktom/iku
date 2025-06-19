@@ -11,32 +11,34 @@ public class Participant {
 
     @ManyToOne(fetch = FetchType.LAZY) // Match를 즉시 로딩할 필요가 없다면 LAZY로 설정
     @JoinColumn(name = "match_id") // 외래 키 컬럼 이름
-    private Match match; // Match 엔티티 클래스 임포트 필요 (동일 패키지 아니면 import org.mtvs.backend.Match; 같은 형식)
+    private Match match; // Match 엔티티 클래스
 
-    private int participantId;
-    private String puuid;
-    private String riotIdGameName;
-    private String riotIdTagline;
-    private String summonerName;
-    private String championName;
-    private int kills;
-    private int deaths;
-    private int assists;
-    private int totalDamageDealtToChampions;
-    private int totalDamageTaken;
-    private int visionScore;
-    private int goldEarned;
-    private int totalMinionsKilled;
-    private int neutralMinionsKilled;
-    private int teamId;
-    private boolean win;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "riot_user_id")
+    private RiotUser riotUser; // RiotUser 엔티티 클래스
 
-    // 기본 생성자는 JPA 엔티티에 필수적입니다.
+    private int participantId; //참여자 ID (1~10)
+    private String puuid; //유저 고유 ID
+    private String riotIdGameName; //인게임 닉네임
+    private String riotIdTagline; //라이엇태그
+    private String summonerName; //소환사 이름
+    private String championName; //(플레이한) 챔피언 이름
+    private int kills; //킬 수
+    private int deaths; //데스 수
+    private int assists; //어시스트 수
+    private int totalDamageDealtToChampions; //챔피언에게 준 총 대미지
+    private int totalDamageTaken; // 받은 총 대미지
+    private int visionScore; //시야 점수
+    private int goldEarned; //획득한 골드
+    private int totalMinionsKilled; //미니언 킬 수
+    private int neutralMinionsKilled; //정글 몬스터 킬 수
+    private int teamId; //팀 ID (100 = 블루팀, 200 = 레드팀)
+    private boolean win; //승리 여부
+
+    // 기본 생성자는 JPA 엔티티에 필수
     public Participant() {
     }
 
-    // 모든 필드를 포함하는 생성자 (선택 사항이지만 편리함)
-    // 실제 사용 시 Match 객체는 인자로 받지 않거나, 필요에 따라 Builder 패턴을 고려할 수 있습니다.
     public Participant(int participantId, String puuid, String riotIdGameName, String riotIdTagline, String summonerName, String championName, int kills, int deaths, int assists, int totalDamageDealtToChampions, int totalDamageTaken, int visionScore, int goldEarned, int totalMinionsKilled, int neutralMinionsKilled, int teamId, boolean win) {
         this.participantId = participantId;
         this.puuid = puuid;
