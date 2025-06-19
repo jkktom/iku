@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.mtvs.backend.user.entity.User;
 import org.mtvs.backend.global.exception.UnauthorizedException;
 import org.mtvs.backend.global.exception.NotFoundException;
+import org.mtvs.backend.user.entity.Role;
 
 
 @Service
@@ -30,7 +31,7 @@ public class AnnouncementService {
 
     @Transactional
     public AnnouncementDto.Response createAnnouncement(AnnouncementDto.Request request, User author) {
-        if (!author.getRole().equals(User.Role.ADMIN)) {
+        if (!author.getRole().equals(Role.ADMIN)) {
             throw new UnauthorizedException("Only admins can create announcements");
         }
 
@@ -46,7 +47,7 @@ public class AnnouncementService {
 
     @Transactional
     public void deleteAnnouncement(String id, User user) {
-        if (!user.getRole().equals(User.Role.ADMIN)) {
+        if (!user.getRole().equals(Role.ADMIN)) {
             throw new UnauthorizedException("Only admins can delete announcements");
         }
 
