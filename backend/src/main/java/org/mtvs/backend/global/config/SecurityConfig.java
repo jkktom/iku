@@ -34,9 +34,6 @@ public class SecurityConfig {
                 // Development environments
                 "http://localhost:*",
                 "http://127.0.0.1:*",
-                "http://localhost:3000",
-                "http://localhost:5173",  // Vite dev server
-                "http://localhost:8080",
 
                 // Production domains
                 "https://*.iku.life",
@@ -44,6 +41,8 @@ public class SecurityConfig {
                 "https://api.iku.life",
                 "https://dev.iku.life",
                 "https://dev-api.iku.life",
+                "http://localhost:3000",
+                "http://localhost:8080",
 
                 // Vercel deployment domains
                 "https://*.vercel.app",
