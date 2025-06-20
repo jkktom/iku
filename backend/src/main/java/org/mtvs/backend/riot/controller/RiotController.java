@@ -34,13 +34,14 @@ public class RiotController {
         return riotUserService.saveOrUpdate(account.getPuuid(), dto.getGameName(), dto.getTagLine());
     }
 
-    //puuid 구하기
-    @GetMapping("/account/{gameName}/{tagLine}")
-    public AccountDto getAccountInfo(
-            @PathVariable String gameName,
-            @PathVariable String tagLine){
-        return riotService.getAccountInfo(gameName,tagLine);
-    }
+//    //puuid 구하기
+//    @GetMapping("/account/{gameName}/{tagLine}")
+//    public AccountDto getAccountInfo(
+//            @PathVariable String gameName,
+//            @PathVariable String tagLine){
+//        return riotService.getAccountInfo(gameName,tagLine);
+//    }
+
     //얻은 puuid를 통해 matchId 구하기
     @GetMapping("/matches/{puuid}")
     public List<String> getMatchIds(

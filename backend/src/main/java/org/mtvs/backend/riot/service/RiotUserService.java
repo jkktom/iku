@@ -3,7 +3,7 @@ package org.mtvs.backend.riot.service;
 import org.mtvs.backend.riot.Repository.RiotUserRepository;
 import org.mtvs.backend.riot.entity.RiotUser;
 import org.springframework.stereotype.Service;
-
+/* 롤 플레이어 계정 저장 */
 @Service
 public class RiotUserService {
     public RiotUserRepository riotUserRepository;
