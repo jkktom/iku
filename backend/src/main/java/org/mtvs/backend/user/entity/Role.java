@@ -20,7 +20,7 @@ public class Role {
     private String name;  // "ADMIN", "USER", "GUEST"
 
     // Constructor for creating fixed roles
-    protected Role(Integer id, String name) {
+    public Role(Integer id, String name) {
         this.id = id;
         this.name = name;
     }

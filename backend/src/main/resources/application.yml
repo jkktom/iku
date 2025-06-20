@@ -12,8 +12,8 @@ spring:
       maximum-pool-size: 2
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: create
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -38,6 +38,7 @@ jwt:
   refresh-token-expiration: 604800000 # 7 days (ms)
   guest-token-expiration: 3600000 # 1 hour (ms)
 clerk:
+  secret-key: ${CLERK_SECRET_KEY}
   domain: giving-ocelot-59.clerk.accounts.dev
 
 riot:
