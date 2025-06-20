@@ -41,13 +41,6 @@ public class JwtFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
         log.info("[JWT 필터] 요청 URI : {}, Authorization 헤더 존재: {}", requestURI, authHeader != null);
 
-        // 공지사항 API는 JWT 필터를 건너뛰고 바로 진행 (개발용)
-        if (requestURI.startsWith("/api/announcements")) {
-            log.info("[JWT 필터] 공지사항 API 요청 - JWT 검증 건너뛰기");
-            chain.doFilter(request, response);
-            return;
-        }
-
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             log.info("[JWT 필터] Authorization 헤더에서 토큰 추출 성공: {}", token.substring(0, Math.min(token.length(), 20)) + "...");
