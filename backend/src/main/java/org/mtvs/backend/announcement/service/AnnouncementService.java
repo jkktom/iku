@@ -11,7 +11,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -30,17 +29,42 @@ public class AnnouncementService {
 
     @Transactional(readOnly = true)
     public Page<AnnouncementDto.Response> getAllAnnouncements(Pageable pageable) {
-        return announcementRepository.findAllByOrderByImportantDescCreatedAtDesc(pageable)
-                .map(AnnouncementDto.Response::new);
+        Page<Announcement> announcements = announcementRepository.findAll(pageable);
+        return announcements.map(AnnouncementDto.Response::new);
     }
 
-    // 기존 메서드도 유지 (하위 호환성을 위해)
     @Transactional(readOnly = true)
     public List<AnnouncementDto.Response> getAllAnnouncements() {
-        return announcementRepository.findAllByOrderByImportantDescCreatedAtDesc()
-                .stream()
-                .map(AnnouncementDto.Response::new)
-                .collect(Collectors.toList());
+        try {
+            System.out.println("=== DEBUG: getAllAnnouncements 시작 ===");
+            List<Announcement> announcements = announcementRepository.findAllByOrderByImportantDescCreatedAtDesc();
+            System.out.println("=== DEBUG: 데이터베이스에서 조회된 공지사항 수: " + announcements.size() + " ===");
+            
+            for (Announcement announcement : announcements) {
+                System.out.println("=== DEBUG: 공지사항 - ID: " + announcement.getId() + 
+                                 ", 제목: " + announcement.getTitle() + 
+                                 ", 생성일: " + announcement.getCreatedAt() + " ===");
+            }
+            
+            List<AnnouncementDto.Response> responses = announcements.stream()
+                    .map(announcement -> {
+                        try {
+                            return new AnnouncementDto.Response(announcement);
+                        } catch (Exception e) {
+                            System.out.println("=== DEBUG: DTO 변환 중 오류 (ID: " + announcement.getId() + "): " + e.getMessage() + " ===");
+                            return null;
+                        }
+                    })
+                    .filter(response -> response != null)
+                    .collect(Collectors.toList());
+                    
+            System.out.println("=== DEBUG: DTO 변환 완료된 공지사항 수: " + responses.size() + " ===");
+            return responses;
+        } catch (Exception e) {
+            System.out.println("=== DEBUG: getAllAnnouncements 오류: " + e.getMessage() + " ===");
+            e.printStackTrace();
+            return List.of(); // 빈 리스트 반환
+        }
     }
 
     @Transactional
@@ -50,10 +74,10 @@ public class AnnouncementService {
         }
 
         Announcement announcement = new Announcement(
-                request.getTitle(),
-                request.getContent(),
-                author,
-                request.isImportant()
+            request.getTitle(),
+            request.getContent(),
+            author,
+            request.isImportant()
         );
 
         return new AnnouncementDto.Response(announcementRepository.save(announcement));
@@ -62,39 +86,57 @@ public class AnnouncementService {
     // 개발용: 인증 없이 공지사항 생성
     @Transactional
     public AnnouncementDto.Response createAnnouncementWithoutAuth(AnnouncementDto.Request request) {
-        // 시스템 사용자를 찾거나 생성
-        User systemUser = userRepository.findByUsername("system")
-                .orElseGet(() -> {
-                    // 임시 유저를 넣음
-                    User newSystemUser = new User(
-                            "system@iku.life",        // email
-                            "system",                 // username
-                            Role.ADMIN,              // role
-                            SignupCategory.Local,    // signupCategory
-                            null,                    // linkingUserId
-                            "password"               // password
-                    );
-                    return userRepository.save(newSystemUser);
-                });
+        try {
+            System.out.println("=== DEBUG: createAnnouncementWithoutAuth 시작 ===");
+            
+            // 시스템 사용자를 찾거나 생성
+            User systemUser = userRepository.findByUsername("system")
+                    .orElseGet(() -> {
+                        System.out.println("=== DEBUG: 시스템 사용자 생성 중 ===");
+                        // Role과 SignupCategory가 DB에 있는지 확인 필요
+                        User newSystemUser = User.builder()
+                                .email("system@iku.life")
+                                .username("system")
+                                .role(Role.ADMIN)
+                                .signupCategory(SignupCategory.Local)
+                                .linkingUserId(null)
+                                .password("password")
+                                .build();
+                        return userRepository.save(newSystemUser);
+                    });
 
-        Announcement announcement = new Announcement(
-                request.getTitle(),
-                request.getContent(),
-                systemUser,
-                request.isImportant()
-        );
+            System.out.println("=== DEBUG: 시스템 사용자 ID: " + systemUser.getId() + " ===");
 
-        Announcement savedAnnouncement = announcementRepository.save(announcement);
-        return new AnnouncementDto.Response(savedAnnouncement);
+            Announcement announcement = new Announcement(
+                    request.getTitle(),
+                    request.getContent(),
+                    systemUser,
+                    request.isImportant()
+            );
+
+            System.out.println("=== DEBUG: 공지사항 엔티티 생성 완료 ===");
+            
+            Announcement savedAnnouncement = announcementRepository.save(announcement);
+            System.out.println("=== DEBUG: 공지사항 저장 완료 - ID: " + savedAnnouncement.getId() + " ===");
+            
+            AnnouncementDto.Response response = new AnnouncementDto.Response(savedAnnouncement);
+            System.out.println("=== DEBUG: DTO 변환 완료 ===");
+            
+            return response;
+        } catch (Exception e) {
+            System.out.println("=== DEBUG: createAnnouncementWithoutAuth 오류: " + e.getMessage() + " ===");
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @Transactional
-    public void deleteAnnouncement(Long id, User user) {
+    public void deleteAnnouncement(String id, User user) {
         if (!user.getRole().equals(Role.ADMIN)) {
             throw new UnauthorizedException("Only admins can delete announcements");
         }
 
-        Optional<Announcement> announcement = announcementRepository.findById(id);
+        Optional<Announcement> announcement = announcementRepository.findById(Long.parseLong(id));
         if (announcement.isEmpty()) {
             throw new NotFoundException("Announcement not found");
         }
@@ -130,5 +172,13 @@ public class AnnouncementService {
 
         // JPA에서 자동으로 저장됨 (@Transactional에 의해)
         return AnnouncementDto.fromEntity(announcement);
+    }
+
+    // 디버그용: 전체 공지사항 수 조회
+    @Transactional(readOnly = true)
+    public long getAnnouncementCount() {
+        long count = announcementRepository.count();
+        System.out.println("=== DEBUG: 전체 공지사항 수: " + count + " ===");
+        return count;
     }
 }
