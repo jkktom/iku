@@ -54,7 +54,30 @@ public class User {
         this.password = password;
         this.createdAt = LocalDateTime.now();
     }
-    
+
+    /**
+     * 사용자 정보를 업데이트합니다.
+     */
+    public void updateInfo(String username, String email) {
+        this.username = username;
+        this.email = email;
+    }
+
+    /**
+     * 비밀번호를 변경합니다.
+     */
+    public void changePassword(String newPassword) {
+        this.password = newPassword;
+    }
+
+    /**
+     * 사용자 역할을 변경합니다.
+     */
+    public void changeRole(Role newRole) {
+        this.role = newRole;
+    }
+
+
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
