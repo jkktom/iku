@@ -7,8 +7,6 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Setter
-@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "users")
 public class User {
@@ -20,7 +18,7 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(unique = true, nullable = false, length = 50)
+    @Column(unique = true, nullable = false)
     private String username;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -78,6 +76,7 @@ public class User {
     public void changeRole(Role newRole) {
         this.role = newRole;
     }
+
 
     @PreUpdate
     protected void onUpdate() {
