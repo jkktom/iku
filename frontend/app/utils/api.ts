@@ -1,9 +1,10 @@
 import { useAuth } from "@clerk/remix";
+import { useCallback } from "react";
 
 export const useApi = () => {
   const { getToken } = useAuth();
 
-  const apiFetch = async (url: string, options: RequestInit = {}) => {
+  const apiFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const token = await getToken();
 
     const headers = new Headers(options.headers);
@@ -22,7 +23,7 @@ export const useApi = () => {
     }
 
     return response.json();
-  };
+  }, [getToken]);
 
   return apiFetch;
 }; 

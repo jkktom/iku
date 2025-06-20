@@ -1,9 +1,12 @@
 package org.mtvs.backend.user.service;
 
 import com.clerk.backend_api.Clerk;
+import com.clerk.backend_api.models.components.EmailAddress;
+import com.clerk.backend_api.models.operations.GetUserResponse;
 import com.nimbusds.jwt.JWTClaimsSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.mtvs.backend.user.entity.User;
 import org.mtvs.backend.user.entity.Role;
 import org.mtvs.backend.user.entity.SignupCategory;
 import org.mtvs.backend.user.repository.RoleRepository;
@@ -23,14 +26,14 @@ public class UserService {
     private final SignupCategoryRepository signupCategoryRepository;
     private final Clerk clerk;
 
-    public org.mtvs.backend.user.entity.User findOrCreateUserFromClerk(JWTClaimsSet claims) {
+    public User findOrCreateUserFromClerk(JWTClaimsSet claims) {
         String clerkUserId = claims.getSubject();
         return userRepository.findByLinkingUserId(clerkUserId)
             .orElseGet(() -> {
                 try {
                     log.info("New user signup from Clerk: {}. Creating local user profile.", clerkUserId);
 
-                    com.clerk.backend_api.models.operations.GetUserResponse response = clerk.users().get(clerkUserId);
+                    GetUserResponse response = clerk.users().get(clerkUserId);
                     
                     if (response.statusCode() != 200 || response.user().isEmpty()) {
                         throw new RuntimeException("Could not fetch user details from Clerk. Status: " + response.statusCode());
@@ -38,32 +41,35 @@ public class UserService {
                     
                     com.clerk.backend_api.models.components.User clerkUser = response.user().get();
 
-                    List<com.clerk.backend_api.models.components.EmailAddress> emails = clerkUser.emailAddresses()
+                    List<EmailAddress> emails = clerkUser.emailAddresses()
                         .orElseThrow(() -> new RuntimeException("Clerk user has no email addresses list."));
 
                     if (emails.isEmpty()) {
                         throw new RuntimeException("Clerk user has no email address.");
                     }
 
-                    String primaryEmailId = clerkUser.primaryEmailAddressId().get().orElse(null);
+                    String primaryEmailId = clerkUser.primaryEmailAddressId().orElse(null);
 
+                    // Find the primary email or use the first one
                     String email = emails.stream()
-                        .filter(e -> e.id().isPresent() && e.id().get().equals(primaryEmailId))
+                        .filter(emailAddr -> primaryEmailId != null && primaryEmailId.equals(emailAddr.id().orElse(null)))
                         .findFirst()
-                        .map(com.clerk.backend_api.models.components.EmailAddress::emailAddress)
-                        .map(o -> o.get().orElse(null))
-                        .orElse(emails.get(0).emailAddress().get().orElse(null));
-                    
-                    if (email == null) {
-                        throw new RuntimeException("Could not determine a valid email address for the Clerk user.");
-                    }
+                        .or(() -> emails.stream().findFirst())
+                        .map(emailAddr -> emailAddr.emailAddress())
+                        .orElseThrow(() -> new RuntimeException("Could not extract email address from Clerk user"));
 
-                    String username = clerkUser.username().get().orElse(email);
+                    String username = clerkUser.username().isPresent() 
+                        ? clerkUser.username().get() 
+                        : null;
+                    
+                    if (username == null || username.trim().isEmpty()) {
+                        throw new RuntimeException("Username is required but not provided by Clerk");
+                    }
 
                     Role userRole = roleRepository.findByName("USER").orElseThrow(() -> new RuntimeException("Default role not found"));
                     SignupCategory clerkCategory = signupCategoryRepository.findByName("Clerk").orElseThrow(() -> new RuntimeException("Clerk signup category not found"));
 
-                    org.mtvs.backend.user.entity.User newUser = org.mtvs.backend.user.entity.User.builder()
+                    User newUser = User.builder()
                         .linkingUserId(clerkUserId)
                         .email(email)
                         .username(username)
@@ -78,15 +84,15 @@ public class UserService {
             });
     }
 
-    public Optional<org.mtvs.backend.user.entity.User> findByLinkingUserId(String linkingUserId) {
+    public Optional<User> findByLinkingUserId(String linkingUserId) {
         return userRepository.findByLinkingUserId(linkingUserId);
     }
 
-    public Optional<org.mtvs.backend.user.entity.User> findByEmail(String email) {
+    public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
 
-    public Optional<org.mtvs.backend.user.entity.User> findByUsername(String username) {
+    public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
 }

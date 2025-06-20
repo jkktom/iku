@@ -1,18 +1,27 @@
-import { SignedIn, SignedOut, UserButton } from '@clerk/remix'
+import { SignedIn, SignedOut, UserButton, useAuth } from '@clerk/remix'
 import { Link } from '@remix-run/react'
 import { useApi } from '~/utils/api'
 import { useEffect, useState } from 'react'
 
 export default function Index() {
   const apiFetch = useApi()
+  const { isSignedIn } = useAuth()
   const [user, setUser] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Only fetch user data if the user is actually signed in
+    if (!isSignedIn) {
+      setUser(null)
+      setError(null)
+      return
+    }
+
     const fetchUser = async () => {
       try {
         const userData = await apiFetch('/api/users/me')
         setUser(userData)
+        setError(null)
       } catch (err) {
         if (err instanceof Error) {
           setError(err.message)
@@ -23,7 +32,7 @@ export default function Index() {
     }
 
     fetchUser()
-  }, [apiFetch])
+  }, [apiFetch, isSignedIn])
 
   return (
     <div>
