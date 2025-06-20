@@ -54,6 +54,7 @@ public class RiotController {
     public MatchDetailDto getMatchDetail(@PathVariable String matchId){
         return riotService.getMatchDetail(matchId);
     }
+
     //타임라인별로 게임 데이터 출력
     @GetMapping("/matches/{matchId}/timeline")
     public MatchTimelineDto getMatchTimeline(@PathVariable String matchId) {
