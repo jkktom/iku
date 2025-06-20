@@ -57,11 +57,6 @@ public class User {
         this.createdAt = LocalDateTime.now();
     }
 
-
-    //임시 유저 생성용
-    public User(String system, String mail, String password, Role admin) {
-    }
-
     /**
      * 사용자 정보를 업데이트합니다.
      */

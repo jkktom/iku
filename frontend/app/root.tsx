@@ -1,10 +1,8 @@
-import type { MetaFunction, LoaderFunction, LinksFunction } from '@remix-run/node'
-
+import type { MetaFunction, LinksFunction } from '@remix-run/node'
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from '@remix-run/react'
 
-import { rootAuthLoader } from '@clerk/remix/ssr.server'
-// Import ClerkApp
-import { ClerkApp } from '@clerk/remix'
+// ✅ Tailwind CSS import
+import tailwindStylesheet from './tailwind.css?url'
 
 export const meta: MetaFunction = () => [
   {
@@ -14,14 +12,14 @@ export const meta: MetaFunction = () => [
   },
 ]
 
-export const loader: LoaderFunction = (args) => rootAuthLoader(args)
-
 export const links: LinksFunction = () => [
   {
     rel: "icon",
     href: "/favicon.ico",
     type: "image/x-icon",
   },
+  // ✅ Tailwind CSS 로드
+  { rel: "stylesheet", href: tailwindStylesheet },
 ]
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -44,5 +42,4 @@ function App() {
   return <Outlet />
 }
 
-// Wrap your app with `ClerkApp`
-export default ClerkApp(App)
+export default App

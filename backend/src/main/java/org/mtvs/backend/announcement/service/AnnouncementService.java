@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.mtvs.backend.announcement.dto.AnnouncementDto;
 import org.mtvs.backend.announcement.entity.Announcement;
 import org.mtvs.backend.announcement.repository.AnnouncementRepository;
+import org.mtvs.backend.user.entity.SignupCategory;
 import org.mtvs.backend.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -64,11 +65,14 @@ public class AnnouncementService {
         // 시스템 사용자를 찾거나 생성
         User systemUser = userRepository.findByUsername("system")
                 .orElseGet(() -> {
+                    // 임시 유저를 넣음
                     User newSystemUser = new User(
-                            "system",
-                            "system@iku.life",
-                            "password",
-                            Role.ADMIN
+                            "system@iku.life",        // email
+                            "system",                 // username
+                            Role.ADMIN,              // role
+                            SignupCategory.Local,    // signupCategory
+                            null,                    // linkingUserId
+                            "password"               // password
                     );
                     return userRepository.save(newSystemUser);
                 });
