@@ -41,8 +41,6 @@ dist/
 *.pid
 
 # Ignore local resources (customize as needed)
-.cursor/
-.taskmaster/
 cursor_resource/
 
 # Added by Task Master AI
@@ -52,6 +50,9 @@ dev-debug.log
 # Environment variables
 .env
 # Editor directories and files
+
+.cursor
+.taskmaster
 .idea
 .vscode
 *.suo
