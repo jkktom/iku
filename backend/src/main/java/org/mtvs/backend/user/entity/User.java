@@ -7,6 +7,8 @@ import java.util.UUID;
 
 @Entity
 @Getter
+@Setter
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "users")
 public class User {
@@ -18,7 +20,7 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 50)
     private String username;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -54,7 +56,34 @@ public class User {
         this.password = password;
         this.createdAt = LocalDateTime.now();
     }
-    
+
+
+    //임시 유저 생성용
+    public User(String system, String mail, String password, Role admin) {
+    }
+
+    /**
+     * 사용자 정보를 업데이트합니다.
+     */
+    public void updateInfo(String username, String email) {
+        this.username = username;
+        this.email = email;
+    }
+
+    /**
+     * 비밀번호를 변경합니다.
+     */
+    public void changePassword(String newPassword) {
+        this.password = newPassword;
+    }
+
+    /**
+     * 사용자 역할을 변경합니다.
+     */
+    public void changeRole(Role newRole) {
+        this.role = newRole;
+    }
+
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
