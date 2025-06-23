@@ -27,9 +27,17 @@ public class AnnouncementDto {
             this.id = announcement.getId();
             this.title = announcement.getTitle();
             this.content = announcement.getContent();
-            this.authorName = announcement.getAuthor().getUsername();
+            this.authorName = announcement.getAuthor() != null ? announcement.getAuthor().getUsername() : "시스템";
             this.important = announcement.isImportant();
-            this.createdAt = announcement.getCreatedAt().toString();
+            // null 체크 추가
+            this.createdAt = announcement.getCreatedAt() != null 
+                ? announcement.getCreatedAt().toString() 
+                : java.time.LocalDateTime.now().toString();
         }
+    }
+
+    // 누락된 fromEntity 메서드 추가
+    public static Response fromEntity(Announcement announcement) {
+        return new Response(announcement);
     }
 }
