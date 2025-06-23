@@ -27,46 +27,52 @@ public class AnnouncementService {
     private final AnnouncementRepository announcementRepository;
     private final UserRepository userRepository;
 
+
+    //페이징을 이용한 공지사항
     @Transactional(readOnly = true)
     public Page<AnnouncementDto.Response> getAllAnnouncements(Pageable pageable) {
         Page<Announcement> announcements = announcementRepository.findAll(pageable);
         return announcements.map(AnnouncementDto.Response::new);
     }
 
-    @Transactional(readOnly = true)
-    public List<AnnouncementDto.Response> getAllAnnouncements() {
-        try {
-            System.out.println("=== DEBUG: getAllAnnouncements 시작 ===");
-            List<Announcement> announcements = announcementRepository.findAllByOrderByImportantDescCreatedAtDesc();
-            System.out.println("=== DEBUG: 데이터베이스에서 조회된 공지사항 수: " + announcements.size() + " ===");
-            
-            for (Announcement announcement : announcements) {
-                System.out.println("=== DEBUG: 공지사항 - ID: " + announcement.getId() + 
-                                 ", 제목: " + announcement.getTitle() + 
-                                 ", 생성일: " + announcement.getCreatedAt() + " ===");
-            }
-            
-            List<AnnouncementDto.Response> responses = announcements.stream()
-                    .map(announcement -> {
-                        try {
-                            return new AnnouncementDto.Response(announcement);
-                        } catch (Exception e) {
-                            System.out.println("=== DEBUG: DTO 변환 중 오류 (ID: " + announcement.getId() + "): " + e.getMessage() + " ===");
-                            return null;
-                        }
-                    })
-                    .filter(response -> response != null)
-                    .collect(Collectors.toList());
-                    
-            System.out.println("=== DEBUG: DTO 변환 완료된 공지사항 수: " + responses.size() + " ===");
-            return responses;
-        } catch (Exception e) {
-            System.out.println("=== DEBUG: getAllAnnouncements 오류: " + e.getMessage() + " ===");
-            e.printStackTrace();
-            return List.of(); // 빈 리스트 반환
-        }
-    }
 
+//    @Transactional(readOnly = true)
+//    public List<AnnouncementDto.Response> getAllAnnouncements() {
+//        try {
+//            System.out.println("=== DEBUG: getAllAnnouncements 시작 ===");
+//            List<Announcement> announcements = announcementRepository.findAllByOrderByImportantDescCreatedAtDesc();
+//            System.out.println("=== DEBUG: 데이터베이스에서 조회된 공지사항 수: " + announcements.size() + " ===");
+//
+//            for (Announcement announcement : announcements) {
+//                System.out.println("=== DEBUG: 공지사항 - ID: " + announcement.getId() +
+//                                 ", 제목: " + announcement.getTitle() +
+//                                 ", 생성일: " + announcement.getCreatedAt() + " ===");
+//            }
+//
+//            List<AnnouncementDto.Response> responses = announcements.stream()
+//                    .map(announcement -> {
+//                        try {
+//                            return new AnnouncementDto.Response(announcement);
+//                        } catch (Exception e) {
+//                            System.out.println("=== DEBUG: DTO 변환 중 오류 (ID: " + announcement.getId() + "): " + e.getMessage() + " ===");
+//                            return null;
+//                        }
+//                    })
+//                    .filter(response -> response != null)
+//                    .collect(Collectors.toList());
+//
+//            System.out.println("=== DEBUG: DTO 변환 완료된 공지사항 수: " + responses.size() + " ===");
+//            return responses;
+//        } catch (Exception e) {
+//            System.out.println("=== DEBUG: getAllAnnouncements 오류: " + e.getMessage() + " ===");
+//            e.printStackTrace();
+//            return List.of(); // 빈 리스트 반환
+//        }
+//    }
+
+
+
+    //운영용 : 인증 필요
     @Transactional
     public AnnouncementDto.Response createAnnouncement(AnnouncementDto.Request request, User author) {
         if (!author.getRole().equals(Role.ADMIN)) {
@@ -130,6 +136,7 @@ public class AnnouncementService {
         }
     }
 
+    //운영용 : 인증 필요
     @Transactional
     public void deleteAnnouncement(String id, User user) {
         if (!user.getRole().equals(Role.ADMIN)) {
@@ -162,6 +169,7 @@ public class AnnouncementService {
         return AnnouncementDto.fromEntity(announcement);
     }
 
+    //운영용 인증 필요
     @Transactional
     public AnnouncementDto.Response updateAnnouncement(Long id, AnnouncementDto.Request dto) {
         Announcement announcement = announcementRepository.findById(id)
