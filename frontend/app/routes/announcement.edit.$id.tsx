@@ -2,7 +2,7 @@ import type { MetaFunction } from "@remix-run/node";
 import { AnnouncementForm } from "~/components/announcement-form";
 import { useNavigate, useParams } from "@remix-run/react";
 import { useState, useEffect } from "react";
-import { announcementApi } from "../lib/announcementApi";
+import { useApi } from "~/utils/api";
 import type { Announcement, AnnouncementRequest } from "../../types/notice";
 import { Loader2 } from "lucide-react";
 
@@ -22,12 +22,12 @@ export default function EditAnnouncement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
+  const apiFetch = useApi()
   useEffect(() => {
     const fetchAnnouncement = async () => {
       try {
         setLoading(true);
-        const data = await announcementApi.getAnnouncementById(id);
+        const data = await apiFetch(`/api/announcements/${id}`);
         console.log('Edit page - Fetched announcement data:', data);
         setAnnouncement(data);
       } catch (err) {
@@ -51,7 +51,10 @@ export default function EditAnnouncement() {
     
     try {
       setSaving(true);
-      await announcementApi.updateAnnouncement(id, formData);
+      await apiFetch(`/api/announcements/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(formData)
+      });
       navigate(`/announcement/${id}`);
     } catch (err) {
       alert('수정 중 오류가 발생했습니다.');
