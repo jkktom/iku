@@ -46,7 +46,6 @@ dist/
 cursor_resource/
 
 # Added by Task Master AI
-logs
 dev-debug.log
 # Dependency directories
 # Environment variables
