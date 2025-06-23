@@ -26,7 +26,7 @@ chat:
     storage-dir: ./md-reports
 gemini:
   api:
-    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
     key: ${GEMINI_API_KEY}
 naver:
   api:
@@ -42,5 +42,5 @@ clerk:
 
 riot:
   api:
-    key: RGAPI-8a09a0c7-30cc-42b0-8d1d-27a06511cdff #riot API Key
+    key: ${RIOT_API_KEY:YOUR_NEW_API_KEY_HERE} #riot API Key
 
