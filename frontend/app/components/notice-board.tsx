@@ -2,11 +2,10 @@ import { useState } from "react"
 import { Button } from "~/components/ui/button"
 import { Card, CardContent, CardHeader } from "~/components/ui/card"
 import { Badge } from "~/components/ui/badge"
-import type { Notice } from "~/types/notice"
+import type { Notice } from "#types/notice"
 import { NoticeForm } from "./notice-form"
 import { NoticeDetail } from "./notice-detail"
 import { Plus } from "lucide-react"
-import Image from "next/image"
 
 interface NoticeBoardProps {
   notices: Notice[]
@@ -42,7 +41,7 @@ export function NoticeBoard({ notices }: NoticeBoardProps) {
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Image src="/logo.png" alt="IKU Logo" width={60} height={60} className="object-contain" />
+            <img src="/logo.png" alt="IKU Logo" width={60} height={60} className="object-contain" />
             <h1 className="text-3xl font-bold text-white">공지 사항</h1>
           </div>
           <Button onClick={() => setIsCreating(true)} className="bg-slate-700 hover:bg-slate-600 text-white">

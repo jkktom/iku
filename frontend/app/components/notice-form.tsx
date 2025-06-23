@@ -8,8 +8,8 @@ import { Checkbox } from "~/components/ui/checkbox"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
 import { Label } from "~/components/ui/label"
 import { createNotice, updateNotice } from "~/lib/actions"
-import type { Notice } from "~/types/notice"
-import { useRouter } from "next/navigation"
+import type { Notice } from "#types/notice"
+import { useNavigate } from "@remix-run/react"
 
 interface NoticeFormProps {
   notice?: Notice
@@ -21,23 +21,30 @@ export function NoticeForm({ notice, onCancel }: NoticeFormProps) {
   const [content, setContent] = useState(notice?.content || "")
   const [isImportant, setIsImportant] = useState(notice?.isImportant || false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const router = useRouter()
+  const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim() || !content.trim()) return
 
-    setIsSubmitting(true)
-    try {
-      if (notice) {
-        await updateNotice(notice.id, { title, content, isImportant })
-      } else {
-        await createNotice({ title, content, isImportant })
-      }
-      onCancel()
-      router.refresh()
-    } catch (error) {
-      console.error("Error saving notice:", error)
+          setIsSubmitting(true)
+      try {
+        const formData = new FormData()
+        formData.append("title", title)
+        formData.append("content", content)
+        formData.append("isImportant", isImportant ? "on" : "")
+        
+        if (notice) {
+          formData.append("id", notice.id.toString())
+          await updateNotice(formData)
+        } else {
+          await createNotice(formData)
+        }
+        
+        onCancel()
+        navigate(".", { replace: true })
+      } catch (error) {
+        console.error("Error saving notice:", error)
     } finally {
       setIsSubmitting(false)
     }

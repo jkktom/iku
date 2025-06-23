@@ -3,7 +3,7 @@ import { useNavigate } from "@remix-run/react"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader } from "./ui/card"
 import { Badge } from "./ui/badge"
-import type { Announcement, PaginatedAnnouncementResponse } from "../../types/notice"
+import type { Announcement, PaginatedAnnouncementResponse } from "#types/notice"
 import { useApi } from "~/utils/api"
 import { Pagination } from "./pagination"
 import { Plus, Loader2 } from "lucide-react"
@@ -13,7 +13,7 @@ const formatDate = (dateString: string | null): string => {
   if (!dateString) return '날짜 없음'
   try {
     return new Date(dateString).toLocaleDateString('ko-KR')
-  } catch (error) {
+  } catch (error) { 
     console.error('날짜 파싱 오류:', error)
     return '날짜 오류'
   }

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader } from "./ui/card"
 import { Badge } from "./ui/badge"
-import type { Announcement } from "../../types/notice"
+import type { Announcement } from "#types/notice"
 import { useApi } from "~/utils/api"
 import { ArrowLeft, Edit, Trash2, Loader2, Clock, User, Calendar } from "lucide-react"
 

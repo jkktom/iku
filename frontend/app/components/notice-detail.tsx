@@ -1,13 +1,11 @@
-"use client"
-
 import { useState } from "react"
 import { Button } from "~/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
 import { Badge } from "~/components/ui/badge"
-import type { Notice } from "~/types/notice"
+import type { Notice } from "#types/notice"
 import { NoticeForm } from "./notice-form"
 import { deleteNotice } from "~/lib/actions"
-import { useRouter } from "next/navigation"
+import { useNavigate } from "@remix-run/react"
 import { Pencil, Trash2, ArrowLeft } from "lucide-react"
 
 interface NoticeDetailProps {
@@ -18,16 +16,18 @@ interface NoticeDetailProps {
 export function NoticeDetail({ notice, onBack }: NoticeDetailProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const router = useRouter()
+  const navigate = useNavigate()
 
   const handleDelete = async () => {
     if (!confirm("정말로 이 공지사항을 삭제하시겠습니까?")) return
 
     setIsDeleting(true)
     try {
-      await deleteNotice(notice.id)
+      const formData = new FormData()
+      formData.append("id", notice.id.toString())
+      await deleteNotice(formData)
       onBack()
-      router.refresh()
+      navigate(".", { replace: true })
     } catch (error) {
       console.error("Error deleting notice:", error)
     } finally {
