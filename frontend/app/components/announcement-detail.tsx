@@ -2,8 +2,8 @@ import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader } from "./ui/card"
 import { Badge } from "./ui/badge"
-import type { Announcement } from "../../types/notice"
-import { announcementApi } from "../lib/announcementApi"
+import type { Announcement } from "#types/notice"
+import { useApi } from "~/utils/api"
 import { ArrowLeft, Edit, Trash2, Loader2, Clock, User, Calendar } from "lucide-react"
 
 // 안전한 날짜 포맷팅 함수
@@ -39,13 +39,13 @@ export function AnnouncementDetail({ id, onBack, onEdit, onDelete }: Announcemen
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-
+  const apiFetch = useApi()
   useEffect(() => {
     const fetchAnnouncement = async () => {
       try {
         setLoading(true)
         setError(null)
-        const data = await announcementApi.getAnnouncementById(id)
+        const data = await apiFetch(`/api/announcements/${id}`)
         console.log('Fetched announcement data:', data)
         setAnnouncement(data)
       } catch (err) {
@@ -68,7 +68,9 @@ export function AnnouncementDetail({ id, onBack, onEdit, onDelete }: Announcemen
 
     try {
       setDeleting(true)
-      await announcementApi.deleteAnnouncement(id)
+      await apiFetch(`/api/announcements/${id}`, {
+        method: 'DELETE',
+      })
       onDelete(id)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.'

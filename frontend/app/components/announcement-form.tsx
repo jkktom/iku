@@ -5,8 +5,8 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
 import { Checkbox } from "./ui/checkbox"
-import type { Announcement, AnnouncementRequest } from "../../types/notice"
-import { announcementApi } from "../lib/announcementApi"
+import type { Announcement, AnnouncementRequest } from "#types/notice"
+import { useApi } from "~/utils/api"
 import { ArrowLeft, Save, Loader2 } from "lucide-react"
 
 interface AnnouncementFormProps {
@@ -30,7 +30,7 @@ export function AnnouncementForm({
     important: false
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
-
+  const apiFetch = useApi()
   const isEditing = !!announcement || isEditMode
 
   useEffect(() => {
@@ -71,14 +71,20 @@ export function AnnouncementForm({
     try {
       if (isEditing && announcement && !isEditMode) {
         console.log('Using old edit mode');
-        await announcementApi.updateAnnouncement(announcement.id, formData)
+        await apiFetch(`/api/announcements/${announcement.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(formData)
+        })
         onSuccess()
       } else if (isEditMode) {
         console.log('Using new edit mode, formData:', formData);
         onSuccess(formData)
       } else {
         console.log('Creating new announcement');
-        await announcementApi.createAnnouncement(formData)
+        await apiFetch(`/api/announcements`, {
+          method: 'POST',
+          body: JSON.stringify(formData)
+        })
         onSuccess()
       }
     } catch (err) {
@@ -195,7 +201,7 @@ export function AnnouncementForm({
                   ) : (
                     <>
                       <Save className="w-4 h-4 mr-2" />
-                      {isEditing ? '수정' : '저장'}
+                      {isEditing ? '수정' : '작성'}
                     </>
                   )}
                 </Button>

@@ -3,8 +3,8 @@ import { useNavigate } from "@remix-run/react"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader } from "./ui/card"
 import { Badge } from "./ui/badge"
-import type { Announcement, PaginatedAnnouncementResponse } from "../../types/notice"
-import { announcementApi } from "../lib/announcementApi"
+import type { Announcement, PaginatedAnnouncementResponse } from "#types/notice"
+import { useApi } from "~/utils/api"
 import { Pagination } from "./pagination"
 import { Plus, Loader2 } from "lucide-react"
 
@@ -13,7 +13,7 @@ const formatDate = (dateString: string | null): string => {
   if (!dateString) return '날짜 없음'
   try {
     return new Date(dateString).toLocaleDateString('ko-KR')
-  } catch (error) {
+  } catch (error) { 
     console.error('날짜 파싱 오류:', error)
     return '날짜 오류'
   }
@@ -27,12 +27,20 @@ export function AnnouncementBoard() {
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
   const navigate = useNavigate()
+  const apiFetch = useApi()
 
   const fetchAnnouncements = async (page: number = 0) => {
     setLoading(true)
     try {
       console.log('Fetching announcements with pagination, page:', page);
-      const result = await announcementApi.getAnnouncementsWithPagination(page, 10, 'id', 'desc')
+      // Use authenticated API calls with proper parameters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: '10',
+        sortBy: 'id',
+        sortDir: 'desc'
+      });
+      const result = await apiFetch(`/api/announcements?${params}`)
       console.log('Pagination API result:', result);
       setAnnouncements(result.content || [])
       setTotalPages(result.totalPages)
@@ -42,7 +50,7 @@ export function AnnouncementBoard() {
       console.error('Pagination API failed, trying fallback:', err);
       // 페이지네이션 API가 실패하면 기존 API로 폴백
       try {
-        const fallbackResult = await announcementApi.getAllAnnouncements()
+        const fallbackResult = await apiFetch('/api/announcements')
         console.log('Fallback API result:', fallbackResult);
         setAnnouncements(fallbackResult || [])
         setTotalPages(1)

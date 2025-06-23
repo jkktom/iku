@@ -71,6 +71,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/error").permitAll()
                         .requestMatchers("/api/announcements/**").permitAll()  // Allow public access to announcements
+                        .requestMatchers("/api/player-analysis/**").permitAll()  // Allow public access to player analysis
                         .requestMatchers("/api/users/me").hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated()
                 )
