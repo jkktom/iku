@@ -2,5 +2,9 @@
   "currentTag": "master",
   "lastSwitched": "2025-06-19T09:17:59.947Z",
   "branchTagMapping": {},
+<<<<<<< HEAD
   "migrationNoticeShown": true
+=======
+  "migrationNoticeShown": false
+>>>>>>> 67caafa3d279a8d4a35fcb392b6ce92027a75e00
 }
