@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.mtvs.backend.auth.security.CustomUserDetails;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
