@@ -5,7 +5,7 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Textarea } from "./ui/textarea"
 import { Checkbox } from "./ui/checkbox"
-import type { Announcement, AnnouncementRequest } from "../../types/notice"
+import type { Announcement, AnnouncementRequest } from "#types/notice"
 import { useApi } from "~/utils/api"
 import { ArrowLeft, Save, Loader2 } from "lucide-react"
 

@@ -1,8 +1,7 @@
 "use server"
 
-import type { Notice, PaginatedNotices } from "~/types/notice"
-import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
+import type { Notice, PaginatedNotices } from "#types/notice"
+import { redirect } from "@remix-run/node"
 
 // 임시 데이터 저장소 (실제로는 데이터베이스를 사용해야 합니다)
 const notices: Notice[] = [
@@ -169,7 +168,6 @@ export async function createNotice(formData: FormData) {
   }
 
   notices.push(newNotice)
-  revalidatePath("/")
   redirect("/")
 }
 
@@ -195,8 +193,6 @@ export async function updateNotice(formData: FormData) {
     isImportant,
   }
 
-  revalidatePath("/")
-  revalidatePath(`/notice/${id}`)
   redirect(`/notice/${id}`)
 }
 
@@ -209,6 +205,5 @@ export async function deleteNotice(formData: FormData) {
   }
 
   notices.splice(index, 1)
-  revalidatePath("/")
   redirect("/")
 }

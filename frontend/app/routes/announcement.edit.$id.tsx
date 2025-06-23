@@ -3,7 +3,7 @@ import { AnnouncementForm } from "~/components/announcement-form";
 import { useNavigate, useParams } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import { useApi } from "~/utils/api";
-import type { Announcement, AnnouncementRequest } from "../../types/notice";
+import type { Announcement, AnnouncementRequest } from "#types/notice";
 import { Loader2 } from "lucide-react";
 
 export const meta: MetaFunction = () => {
