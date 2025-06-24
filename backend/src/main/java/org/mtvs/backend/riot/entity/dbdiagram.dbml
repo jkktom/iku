@@ -1,0 +1,87 @@
+Table matches {
+  match_id varchar [pk]
+  game_duration bigint
+  game_mode varchar
+  game_version varchar
+  queue_id int
+  game_start_time datetime
+}
+
+Table champ {
+  champ_id varchar [pk]
+  champ_name_riot bigint
+  
+}
+
+Table summoner_tag {
+  puuid varchar [pk]
+  riot_id_tagline varchar
+  summoner_name varchar
+}
+
+Table participants {
+  id bigint [pk, increment]
+  match_id varchar [ref: > matches.match_id]
+  participant_id int
+  puuid varchar
+  riot_id_game_name varchar
+  riot_id_tagline varchar
+  summoner_name varchar
+  champion_name varchar
+  kills int
+  deaths int
+  assists int
+  total_damage_dealt_to_champions int
+  total_damage_taken int
+  vision_score int
+  gold_earned int
+  total_minions_killed int
+  neutral_minions_killed int
+  team_id int
+  win boolean
+}
+
+Table match_timelines {
+  id bigint [pk, increment]
+  match_id varchar [ref: > matches.match_id]
+  timestamp bigint
+}
+
+Table participant_frames {
+  id bigint [pk, increment]
+  timeline_id bigint [ref: > match_timelines.id]
+  participant_id int
+  total_gold int
+  level int
+  minions_killed int
+  jungle_minions_killed int
+  x int
+  y int
+}
+
+Table match_events {
+  id bigint [pk, increment]
+  timeline_id bigint [ref: > match_timelines.id]
+  type varchar
+  timestamp bigint
+  participant_id int
+  killer_id int
+  victim_id int
+  monster_type varchar
+  building_type varchar
+  lane_type varchar
+  tower_type varchar
+  item_id int
+}
+
+Table event_assisting_participants {
+  event_id bigint [ref: > match_events.id]
+  participant_id int
+  // Composite PK if needed: [event_id, participant_id]
+}
+ 
+
+
+Ref: "champ"."champ_name_riot" < "participants"."champion_name"
+
+Ref: "summoner_tag"."puuid" < "participants"."puuid"
