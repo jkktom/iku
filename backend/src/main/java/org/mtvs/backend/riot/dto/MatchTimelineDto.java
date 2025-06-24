@@ -93,8 +93,11 @@ public class MatchTimelineDto {
         private int level;
         private int minionsKilled;
         private int jungleMinionsKilled;
-        private int x; // 위치 정보 (선택적)
-        private int y; // 위치 정보 (선택적)
+        // ============= 수정 부분 START =============
+        // 기존: private int x; private int y; (직접 필드)
+        // 변경: position 객체로 중첩 구조 처리
+        private Position position; // Riot API의 실제 JSON 구조에 맞게 수정
+        // ============= 수정 부분 END =============
 
         // 기본 생성자
         public ParticipantFrame() {
@@ -133,6 +136,58 @@ public class MatchTimelineDto {
             this.jungleMinionsKilled = jungleMinionsKilled;
         }
 
+        // ============= 수정 부분 START =============
+        // 기존: getX(), setX(), getY(), setY() 직접 필드 접근
+        // 변경: position 객체를 통한 x, y 접근
+        public Position getPosition() {
+            return position;
+        }
+
+        public void setPosition(Position position) {
+            this.position = position;
+        }
+
+        // 편의를 위한 x, y 접근 메소드 추가 (기존 코드 호환성)
+        public int getX() {
+            return position != null ? position.getX() : 0;
+        }
+
+        public int getY() {
+            return position != null ? position.getY() : 0;
+        }
+        // ============= 수정 부분 END =============
+
+        // toString() for ParticipantFrame (optional)
+        @Override
+        public String toString() {
+            return "ParticipantFrame{" +
+                    "totalGold=" + totalGold +
+                    ", level=" + level +
+                    ", minionsKilled=" + minionsKilled +
+                    ", jungleMinionsKilled=" + jungleMinionsKilled +
+                    // ============= 수정 부분 START =============
+                    // 기존: ", x=" + x + ", y=" + y +
+                    // 변경: position 객체 출력
+                    ", position=" + position +
+                    // ============= 수정 부분 END =============
+                    '}';
+        }
+    }
+
+    // ============= 추가된 부분 START =============
+    // Riot API의 position JSON 구조를 매핑하기 위한 새로운 클래스
+    public static class Position {
+        private int x;
+        private int y;
+
+        public Position() {
+        }
+
+        public Position(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
         public int getX() {
             return x;
         }
@@ -149,19 +204,15 @@ public class MatchTimelineDto {
             this.y = y;
         }
 
-        // toString() for ParticipantFrame (optional)
         @Override
         public String toString() {
-            return "ParticipantFrame{" +
-                    "totalGold=" + totalGold +
-                    ", level=" + level +
-                    ", minionsKilled=" + minionsKilled +
-                    ", jungleMinionsKilled=" + jungleMinionsKilled +
-                    ", x=" + x +
+            return "Position{" +
+                    "x=" + x +
                     ", y=" + y +
                     '}';
         }
     }
+    // ============= 추가된 부분 END =============
 
     public static class Event {
         private String type;
