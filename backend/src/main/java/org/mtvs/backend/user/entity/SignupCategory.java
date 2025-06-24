@@ -18,7 +18,7 @@ public class SignupCategory {
     @Column(nullable = false, unique = true)
     private String name;
 
-    protected SignupCategory(Integer id, String name) {
+    public SignupCategory(Integer id, String name) {
         this.id = id;
         this.name = name;
     }

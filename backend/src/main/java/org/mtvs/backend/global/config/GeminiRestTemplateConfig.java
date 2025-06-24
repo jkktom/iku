@@ -30,5 +30,11 @@ public class GeminiRestTemplateConfig {
         
         return restTemplate;
     }
+
+    @Bean
+    @Qualifier("defaultRestTemplate")
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
     
 }

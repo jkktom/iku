@@ -77,21 +77,23 @@ public class MatchDetailDto {
 
     //각 플레이별 정보
     public static class Participant{
-        private int participandId; //참가자 번호(1~10)
-        private String puuid; //고유 식별자
-        private String riotIdGameName; //라이엇 계정 게임명
-        private String riotIdTagline; //라이엇 태그
-        private String summonerName; //인게임 소환사명 -> 라이엇 계정 게임명과 동일
-        private String championName; //플리아한 챔피언 이름
-        private int kills; //킬 수
-        private int deaths; //데스 수
-        private int assists; //어시스트 수
-        private int totalDamageDealtToChampions; //챔피언에게 가한 총 피해량
-        private int totalDamageTaken; //받은 총 피해량
-        private int visionScore; //시야 점수
-        private int goldEarned; //획득한 총 골드
-        private int totalMinionsKilled; //라인 미니언 처치 수
-        private int neutralMinionsKilled; //정글 몬슽터 처치 수
+        private int participandId;
+        private String puuid;
+        private String riotIdGameName;
+        private String riotIdTagline;
+        private String summonerName;
+        private String championName;
+        private int kills;
+        private int deaths;
+        private int assists;
+        private int totalDamageDealtToChampions;
+        private int totalDamageTaken;
+        private int visionScore;
+        private int goldEarned;
+        private int totalMinionsKilled;
+        private int neutralMinionsKilled;
+        private boolean win;
+        private int teamId;
 
         public Participant() {
         }
@@ -216,6 +218,22 @@ public class MatchDetailDto {
             this.neutralMinionsKilled = neutralMinionsKilled;
         }
 
+        public boolean isWin() {
+            return win;
+        }
+
+        public void setWin(boolean win) {
+            this.win = win;
+        }
+
+        public int getTeamId() {
+            return teamId;
+        }
+
+        public void setTeamId(int teamId) {
+            this.teamId = teamId;
+        }
+
         @Override
         public String toString() {
             return "Participant{" +
@@ -234,6 +252,8 @@ public class MatchDetailDto {
                     ", goldEarned=" + goldEarned +
                     ", totalMinionsKilled=" + totalMinionsKilled +
                     ", neutralMinionsKilled=" + neutralMinionsKilled +
+                    ", win=" + win +
+                    ", teamId=" + teamId +
                     '}';
         }
     }
