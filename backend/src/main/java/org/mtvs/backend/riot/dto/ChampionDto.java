@@ -2,6 +2,7 @@ package org.mtvs.backend.riot.dto;
 
 import org.mtvs.backend.riot.entity.Champion;
 
+//전체 챔피언 정보
 public class ChampionDto {
     private String id;
     private String name;
