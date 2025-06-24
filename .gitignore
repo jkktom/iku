@@ -59,3 +59,4 @@ dev-debug.log
 *.sln
 *.sw?
 # OS specific
+.gradle/
