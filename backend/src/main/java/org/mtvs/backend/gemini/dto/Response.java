@@ -6,17 +6,22 @@ import java.util.List;
 @Data
 public class Response {
 
-    private List<Content> contents;
+    private List<Candidate> candidates;
 
     @Data
-    public class Content {
-        private List<Parts> parts;
-        private String role;
-
+    public static class Candidate {
+        private Content content;
+        private String finishReason;
     }
 
     @Data
-    public class Parts {
+    public static class Content {
+        private List<Part> parts;
+        private String role;
+    }
+
+    @Data
+    public static class Part {
         private String text;
     }
 }

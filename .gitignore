@@ -41,16 +41,17 @@ dist/
 *.pid
 
 # Ignore local resources (customize as needed)
+.cursor/
+.taskmaster/
 cursor_resource/
 
 # Added by Task Master AI
-logs
 dev-debug.log
 # Dependency directories
 # Environment variables
 .env
 # Editor directories and files
-.idea
+.idea/
 .vscode
 *.suo
 *.ntvs*
@@ -58,3 +59,4 @@ dev-debug.log
 *.sln
 *.sw?
 # OS specific
+.gradle/
