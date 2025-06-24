@@ -90,6 +90,8 @@ public class MatchDetailDto {
         private int goldEarned;
         private int totalMinionsKilled;
         private int neutralMinionsKilled;
+        private boolean win;
+        private int teamId;
 
         public Participant() {
         }
@@ -214,6 +216,22 @@ public class MatchDetailDto {
             this.neutralMinionsKilled = neutralMinionsKilled;
         }
 
+        public boolean isWin() {
+            return win;
+        }
+
+        public void setWin(boolean win) {
+            this.win = win;
+        }
+
+        public int getTeamId() {
+            return teamId;
+        }
+
+        public void setTeamId(int teamId) {
+            this.teamId = teamId;
+        }
+
         @Override
         public String toString() {
             return "Participant{" +
@@ -232,6 +250,8 @@ public class MatchDetailDto {
                     ", goldEarned=" + goldEarned +
                     ", totalMinionsKilled=" + totalMinionsKilled +
                     ", neutralMinionsKilled=" + neutralMinionsKilled +
+                    ", win=" + win +
+                    ", teamId=" + teamId +
                     '}';
         }
     }

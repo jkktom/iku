@@ -2,7 +2,7 @@ server:
   port: 8080
 spring:
   dotenv:
-    location: .env.local
+    location: .env
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/iku-ai-db}
     username: ${DB_USERNAME:user}
@@ -26,22 +26,22 @@ chat:
     storage-dir: ./md-reports
 gemini:
   api:
-    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
-    key: ${GEMINI_API_KEY}
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+    key: ${GEMINI_API_KEY:temp_gemini_key_for_development}
 naver:
   api:
-    id: ${NAVER_API_ID}
-    secret: ${NAVER_API_SECRET}
+    id: ${NAVER_API_ID:temp_naver_id_for_development}
+    secret: ${NAVER_API_SECRET:temp_naver_secret_for_development}
 jwt:
   secret: ${JWT_SECRET:4a8NRS86guvb1rzq1vlFPXOR4Nx96iKv4lnBAzDx8xo=}
   access-token-expiration: 3600000 # 1 hour (ms)
   refresh-token-expiration: 604800000 # 7 days (ms)
   guest-token-expiration: 3600000 # 1 hour (ms)
 clerk:
-  secret-key: ${CLERK_SECRET_KEY}
+  secret-key: ${CLERK_SECRET_KEY:temp_clerk_key_for_development}
   domain: giving-ocelot-59.clerk.accounts.dev
 
 riot:
   api:
-    key: RGAPI-8a09a0c7-30cc-42b0-8d1d-27a06511cdff #riot API Key
+    key: ${RIOT_API_KEY:YOUR_NEW_API_KEY_HERE} #riot API Key
 
