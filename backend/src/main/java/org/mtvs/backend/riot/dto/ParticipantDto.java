@@ -1,5 +1,6 @@
 package org.mtvs.backend.riot.dto;
 
+//매치내에 각 플레이별 정보
 public class ParticipantDto {
     private int participantId; //참가자 번호(1~10)
     private String puuid; //고유 식별자
@@ -16,6 +17,8 @@ public class ParticipantDto {
     private int goldEarned; //획득한 총 골드
     private int totalMinionsKilled; //라인 미니언 처치 수
     private int neutralMinionsKilled; //정글 몬슽터 처치 수
+    private boolean win; //승리 여부
+    private int teamId; //팀 ID
 
     public ParticipantDto() {
     }
@@ -140,6 +143,22 @@ public class ParticipantDto {
         this.neutralMinionsKilled = neutralMinionsKilled;
     }
 
+    public boolean isWin() {
+        return win;
+    }
+
+    public void setWin(boolean win) {
+        this.win = win;
+    }
+
+    public int getTeamId() {
+        return teamId;
+    }
+
+    public void setTeamId(int teamId) {
+        this.teamId = teamId;
+    }
+
     @Override
     public String toString() {
         return "ParticipantDto{" +
@@ -158,6 +177,8 @@ public class ParticipantDto {
                 ", goldEarned=" + goldEarned +
                 ", totalMinionsKilled=" + totalMinionsKilled +
                 ", neutralMinionsKilled=" + neutralMinionsKilled +
+                ", win=" + win +
+                ", teamId=" + teamId +
                 '}';
     }
 }
