@@ -43,7 +43,12 @@ dist/
 # Ignore local resources (customize as needed)
 .cursor/
 .taskmaster/
+.roomodes
+.windsurfrules
+.roo
 cursor_resource/
+CLAUDE.md
+.env.example
 
 # Added by Task Master AI
 dev-debug.log
