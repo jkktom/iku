@@ -219,8 +219,8 @@ public class GameAnalysisService {
     private List<Map<String, Object>> extractPlayerEvents(MatchTimelineDto matchTimeline, int participantId) {
         List<Map<String, Object>> playerEvents = new ArrayList<>();
         
-        if (matchTimeline.getTimeInfo() != null && matchTimeline.getTimeInfo().getFrames() != null) {
-            for (FrameDto frame : matchTimeline.getTimeInfo().getFrames()) {
+        if (matchTimeline.getInfo() != null && matchTimeline.getInfo().getFrames() != null) {
+            for (FrameDto frame : matchTimeline.getInfo().getFrames()) {
                 if (frame.getEvents() != null) {
                     for (EventDto event : frame.getEvents()) {
                         // 해당 플레이어와 관련된 이벤트만 추출
@@ -480,11 +480,11 @@ public class GameAnalysisService {
         zoneTimeSpent.put("river", 0);
         zoneTimeSpent.put("unknown", 0);
         
-        if (matchTimeline.getTimeInfo() != null && matchTimeline.getTimeInfo().getFrames() != null) {
-            System.out.println("총 프레임 수: " + matchTimeline.getTimeInfo().getFrames().size());
+        if (matchTimeline.getInfo() != null && matchTimeline.getInfo().getFrames() != null) {
+            System.out.println("총 프레임 수: " + matchTimeline.getInfo().getFrames().size());
             
-            for (int i = 0; i < matchTimeline.getTimeInfo().getFrames().size(); i++) {
-                FrameDto frame = matchTimeline.getTimeInfo().getFrames().get(i);
+            for (int i = 0; i < matchTimeline.getInfo().getFrames().size(); i++) {
+                FrameDto frame = matchTimeline.getInfo().getFrames().get(i);
                 System.out.println("프레임 " + i + " 처리 중, 타임스탬프: " + frame.getTimestamp());
                 
                 if (frame.getParticipantFrames() != null) {

@@ -106,4 +106,4 @@ public class RiotService {
     public String getQueueName(int queueId) {
         return QUEUE_NAMES.getOrDefault(queueId, "알 수 없는 큐 (" + queueId + ")");
     }
-} 
+}
