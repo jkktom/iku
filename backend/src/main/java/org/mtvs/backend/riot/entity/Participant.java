@@ -59,155 +59,160 @@ public class Participant {
         this.win = win;
     }
 
-
-    // Getter 메소드들
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public Match getMatch() {
         return match;
     }
 
-    public int getParticipantId() {
-        return participantId;
-    }
-
-    public String getPuuid() {
-        return puuid;
-    }
-
-    public String getRiotIdGameName() {
-        return riotIdGameName;
-    }
-
-    public String getRiotIdTagline() {
-        return riotIdTagline;
-    }
-
-    public String getSummonerName() {
-        return summonerName;
-    }
-
-    public String getChampionName() {
-        return championName;
-    }
-
-    public int getKills() {
-        return kills;
-    }
-
-    public int getDeaths() {
-        return deaths;
-    }
-
-    public int getAssists() {
-        return assists;
-    }
-
-    public int getTotalDamageDealtToChampions() {
-        return totalDamageDealtToChampions;
-    }
-
-    public int getTotalDamageTaken() {
-        return totalDamageTaken;
-    }
-
-    public int getVisionScore() {
-        return visionScore;
-    }
-
-    public int getGoldEarned() {
-        return goldEarned;
-    }
-
-    public int getTotalMinionsKilled() {
-        return totalMinionsKilled;
-    }
-
-    public int getNeutralMinionsKilled() {
-        return neutralMinionsKilled;
-    }
-
-    public int getTeamId() {
-        return teamId;
-    }
-
-    public boolean isWin() { // boolean 타입은 `is` 접두사를 사용하기도 함 (IDE 자동 생성 기준)
-        return win;
-    }
-
-    // Setter 메소드들
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public void setMatch(Match match) {
         this.match = match;
+    }
+
+    public RiotUser getRiotUser() {
+        return riotUser;
+    }
+
+    public void setRiotUser(RiotUser riotUser) {
+        this.riotUser = riotUser;
+    }
+
+    public int getParticipantId() {
+        return participantId;
     }
 
     public void setParticipantId(int participantId) {
         this.participantId = participantId;
     }
 
+    public String getPuuid() {
+        return puuid;
+    }
+
     public void setPuuid(String puuid) {
         this.puuid = puuid;
+    }
+
+    public String getRiotIdGameName() {
+        return riotIdGameName;
     }
 
     public void setRiotIdGameName(String riotIdGameName) {
         this.riotIdGameName = riotIdGameName;
     }
 
+    public String getRiotIdTagline() {
+        return riotIdTagline;
+    }
+
     public void setRiotIdTagline(String riotIdTagline) {
         this.riotIdTagline = riotIdTagline;
+    }
+
+    public String getSummonerName() {
+        return summonerName;
     }
 
     public void setSummonerName(String summonerName) {
         this.summonerName = summonerName;
     }
 
+    public String getChampionName() {
+        return championName;
+    }
+
     public void setChampionName(String championName) {
         this.championName = championName;
+    }
+
+    public int getKills() {
+        return kills;
     }
 
     public void setKills(int kills) {
         this.kills = kills;
     }
 
+    public int getDeaths() {
+        return deaths;
+    }
+
     public void setDeaths(int deaths) {
         this.deaths = deaths;
+    }
+
+    public int getAssists() {
+        return assists;
     }
 
     public void setAssists(int assists) {
         this.assists = assists;
     }
 
+    public int getTotalDamageDealtToChampions() {
+        return totalDamageDealtToChampions;
+    }
+
     public void setTotalDamageDealtToChampions(int totalDamageDealtToChampions) {
         this.totalDamageDealtToChampions = totalDamageDealtToChampions;
+    }
+
+    public int getTotalDamageTaken() {
+        return totalDamageTaken;
     }
 
     public void setTotalDamageTaken(int totalDamageTaken) {
         this.totalDamageTaken = totalDamageTaken;
     }
 
+    public int getVisionScore() {
+        return visionScore;
+    }
+
     public void setVisionScore(int visionScore) {
         this.visionScore = visionScore;
+    }
+
+    public int getGoldEarned() {
+        return goldEarned;
     }
 
     public void setGoldEarned(int goldEarned) {
         this.goldEarned = goldEarned;
     }
 
+    public int getTotalMinionsKilled() {
+        return totalMinionsKilled;
+    }
+
     public void setTotalMinionsKilled(int totalMinionsKilled) {
         this.totalMinionsKilled = totalMinionsKilled;
+    }
+
+    public int getNeutralMinionsKilled() {
+        return neutralMinionsKilled;
     }
 
     public void setNeutralMinionsKilled(int neutralMinionsKilled) {
         this.neutralMinionsKilled = neutralMinionsKilled;
     }
 
+    public int getTeamId() {
+        return teamId;
+    }
+
     public void setTeamId(int teamId) {
         this.teamId = teamId;
+    }
+
+    public boolean isWin() {
+        return win;
     }
 
     public void setWin(boolean win) {
