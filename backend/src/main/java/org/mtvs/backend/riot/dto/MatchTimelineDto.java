@@ -1,23 +1,23 @@
 package org.mtvs.backend.riot.dto;
 
 public class MatchTimelineDto {
-    private TimelineInfoDto timeInfo;
+    private TimelineInfoDto info;
 
     public MatchTimelineDto() {
     }
 
-    public TimelineInfoDto getTimeInfo() {
-        return timeInfo;
+    public TimelineInfoDto getInfo() {
+        return info;
     }
 
-    public void setTimeInfo(TimelineInfoDto timeInfo) {
-        this.timeInfo = timeInfo;
+    public void setInfo(TimelineInfoDto info) {
+        this.info = info;
     }
 
     @Override
     public String toString() {
         return "MatchTimelineDto{" +
-                "timeInfo=" + timeInfo +
+                "info=" + info +
                 '}';
     }
 }
