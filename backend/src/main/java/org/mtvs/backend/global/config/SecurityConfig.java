@@ -28,34 +28,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        // Support multiple environments with environment-specific configurations
-        List<String> allowedOrigins = List.of(
-                // Development environments
-                "http://localhost:*",
-                "http://127.0.0.1:*",
-
-                // Production domains
-                "https://*.iku.life",
-                "https://iku.life",
-                "https://api.iku.life",
-                "https://dev.iku.life",
-                "https://dev-api.iku.life",
-                "http://localhost:3000",
-                "http://localhost:8080",
-
-                // Vercel deployment domains
-                "https://*.vercel.app",
-                "https://iku-ghost-ai.vercel.app",
-                "https://iku-ghost-ai-*.vercel.app"
-        );
-
-        config.setAllowedOriginPatterns(allowedOrigins);
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        
+        // 테스트용: 모든 요청 허용
+        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedMethods(List.of("*"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         config.setAllowCredentials(true);
-        config.setMaxAge(3600L); // 1 hour preflight cache
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
@@ -69,11 +48,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/error").permitAll()
-                        .requestMatchers("/api/announcements/**").permitAll()  // Allow public access to announcements
-                        .requestMatchers("/api/player-analysis/**").permitAll()  // Allow public access to player analysis
-                        .requestMatchers("/api/users/me").hasAnyRole("USER", "ADMIN")
-                        .anyRequest().authenticated()
+                        // 테스트용: 모든 요청 허용
+                        .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

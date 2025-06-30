@@ -25,7 +25,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/announcements")
-@CrossOrigin(origins = "*") // CORS 문제 방지용
+@CrossOrigin(origins = "*") // 테스트용 CORS 전체 허용
 @Validated // 클래스 레벨 validation 활성화
 public class AnnouncementController {
 

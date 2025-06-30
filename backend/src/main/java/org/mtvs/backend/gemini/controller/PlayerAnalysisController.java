@@ -18,7 +18,6 @@ public class PlayerAnalysisController {
     
     /**
      * 플레이어의 최근 매치 목록 조회
-     * Postman 테스트용
      */
     @GetMapping("/{gameName}/{tagLine}/matches")
     public ResponseEntity<?> getPlayerMatches(
@@ -27,19 +26,10 @@ public class PlayerAnalysisController {
             @RequestParam(defaultValue = "5") int count) {
         
         try {
-            System.out.println("=== API 호출: 매치 목록 조회 ===");
-            System.out.println("플레이어: " + gameName + "#" + tagLine);
-            System.out.println("조회할 매치 수: " + count);
-            
             Map<String, Object> result = gameAnalysisService.getPlayerMatches(gameName, tagLine, count);
-            
-            System.out.println("매치 목록 조회 성공!");
             return ResponseEntity.ok(result);
             
         } catch (Exception e) {
-            System.err.println("매치 목록 조회 실패: " + e.getMessage());
-            e.printStackTrace();
-            
             return ResponseEntity.internalServerError().body(
                 Map.of(
                     "error", "매치 목록 조회 실패",
@@ -52,16 +42,11 @@ public class PlayerAnalysisController {
     
     /**
      * 특정 매치의 개인 분석 수행
-     * Postman 테스트용
      */
     @PostMapping("/analyze")
     public ResponseEntity<?> analyzePlayerMatch(@RequestBody AnalysisRequest request) {
         
         try {
-            System.out.println("=== API 호출: 개인 매치 분석 ===");
-            System.out.println("플레이어: " + request.getGameName() + "#" + request.getTagLine());
-            System.out.println("매치 ID: " + request.getMatchId());
-            
             String feedback = gameAnalysisService.analyzePlayerMatch(
                 request.getGameName(),
                 request.getTagLine(), 
@@ -77,13 +62,9 @@ public class PlayerAnalysisController {
                 "timestamp", System.currentTimeMillis()
             );
             
-            System.out.println("개인 매치 분석 성공!");
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.err.println("개인 매치 분석 실패: " + e.getMessage());
-            e.printStackTrace();
-            
             return ResponseEntity.internalServerError().body(
                 Map.of(
                     "success", false,
@@ -93,23 +74,6 @@ public class PlayerAnalysisController {
                 )
             );
         }
-    }
-    
-    /**
-     * 간단한 테스트용 엔드포인트
-     */
-    @GetMapping("/test")
-    public ResponseEntity<?> testEndpoint() {
-        return ResponseEntity.ok(
-            Map.of(
-                "message", "Player Analysis API가 정상 동작 중입니다!",
-                "availableEndpoints", Map.of(
-                    "getMatches", "GET /{gameName}/{tagLine}/matches?count=5",
-                    "analyzeMatch", "POST /analyze"
-                ),
-                "timestamp", System.currentTimeMillis()
-            )
-        );
     }
     
     /**

@@ -53,6 +53,14 @@ export default function Index() {
               <h1 className="text-xl font-semibold text-gray-900">IKU 공지사항 시스템</h1>
             </div>
             <div className="flex items-center gap-4">
+              <SignedIn>
+                <Link 
+                  to="/ai-analysis" 
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                >
+                  AI 분석
+                </Link>
+              </SignedIn>
               <SignedOut>
                 <Link 
                   to="/sign-in" 
