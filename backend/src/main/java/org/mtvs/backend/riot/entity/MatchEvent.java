@@ -14,23 +14,23 @@ public class MatchEvent {
     @JoinColumn(name = "timeline_id") // 외래 키 컬럼 이름
     private MatchTimeline timeline; // MatchTimeline 엔티티 클래스 임포트 필요
 
-    private String type;
-    private long timestamp;
-    private int participantId;
-    private int killerId;
-    private int victimId;
+    private String type; // 이벤트 타입 (CHAMPION_KILL, BUILDING_KILL, ELITE_MONSTER_KILL 등)
+    private long timestamp; // 이벤트 발생 시간
+    private int participantId; // 관련 참여자 ID
+    private int killerId; // 킬을 낸 유저 ID
+    private int victimId; // 죽은 유저 ID
 
-    @ElementCollection // 값 타입 컬렉션 매핑
+    @ElementCollection
     @CollectionTable(name = "event_assisting_participants",
             joinColumns = @JoinColumn(name = "event_id")) // 연관된 이벤트의 ID를 참조하는 컬럼
     @Column(name = "participant_id") // 컬렉션에 저장될 값의 컬럼 이름
-    private List<Integer> assistingParticipantIds;
+    private List<Integer> assistingParticipantIds; //어시스트 기여자 ID들
 
-    private String monsterType;
-    private String buildingType;
-    private String laneType;
-    private String towerType;
-    private int itemId;
+    private String monsterType; // 몬스터 타입 (드래곤, 바론 등)
+    private String buildingType; // 건물 타입 (포탑, 억제기 등)
+    private String laneType; // 라인 타입 (탑, 미드, 바텀 등)
+    private String towerType; // 타워 타입 (OUTER, INNER, BASE 등)
+    private int itemId; // 아이템 ID
 
     // 기본 생성자는 JPA 엔티티에 필수적입니다.
     public MatchEvent() {

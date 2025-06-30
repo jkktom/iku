@@ -72,6 +72,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**", "/error").permitAll()
                         .requestMatchers("/api/announcements/**").permitAll()  // Allow public access to announcements
                         .requestMatchers("/api/player-analysis/**").permitAll()  // Allow public access to player analysis
+                        .requestMatchers("/api/gemini/**").permitAll()
+                        .requestMatchers("/api/champions/**").permitAll()
+                        .requestMatchers("/api/riot/**").permitAll()
                         .requestMatchers("/api/users/me").hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated()
                 )

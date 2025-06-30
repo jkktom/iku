@@ -10,13 +10,13 @@ import java.util.List;
 public class MatchTimeline {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id; //타임라인 고유 ID
 
     @ManyToOne
     @JoinColumn(name = "match_id")
-    private Match match;
+    private Match match; // 게임 Id
 
-    private long timestamp;
+    private long timestamp; //타임라인 시간
 
     @OneToMany(mappedBy = "timeline", cascade = CascadeType.ALL)
     private List<ParticipantFrame> participantFrames;
