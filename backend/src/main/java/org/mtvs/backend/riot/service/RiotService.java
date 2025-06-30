@@ -16,6 +16,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 import java.util.Map;
 
+/* 게임 매치 관련 */
 @Service
 public class RiotService {
     private final RestTemplate restTemplate;
@@ -37,7 +38,7 @@ public class RiotService {
     public RiotService(RestTemplate restTemplate, UriComponentsContributor uriComponentsContributor) {
         this.restTemplate = restTemplate;
     }
-
+    /* 유저의 정보 (puuid, gameName, tagLine 출력) */
     public AccountDto getAccountInfo(String gameName, String tagLine) {
         String url = UriComponentsBuilder.fromHttpUrl(ASIA_BASE_URL)
                 .path("/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}")
@@ -46,12 +47,12 @@ public class RiotService {
 
         return restTemplate.exchange(
                 url,
-                HttpMethod.GET,
-                createHttpEntity(),
-                AccountDto.class
+                HttpMethod.GET, //API에 get 요청
+                createHttpEntity(), //Riot API 키가 포함된 헤더 생성
+                AccountDto.class //puuid, gameName, tagLine 출력
         ).getBody();
     }
-
+    /* 매치의 고유 ID 조회 */
     public List<String> getMatchIds(String puuid, int start, int count) {
         String url = UriComponentsBuilder.fromHttpUrl(ASIA_BASE_URL)
                 .path("/lol/match/v5/matches/by-puuid/{puuid}/ids")
@@ -67,7 +68,7 @@ public class RiotService {
                 }
         ).getBody();
     }
-
+    /* 해당 매치의 상세 정보*/
     public MatchDetailDto getMatchDetail(String matchId) {
         String url = UriComponentsBuilder.fromHttpUrl(ASIA_BASE_URL)
                 .path("/lol/match/v5/matches/{matchId}")
@@ -81,7 +82,7 @@ public class RiotService {
                 MatchDetailDto.class
         ).getBody();
     }
-
+    /* 해당 매치의 타임라인별 정보*/
     public MatchTimelineDto getMatchTimeline(String matchId) {
         String url = UriComponentsBuilder.fromHttpUrl(ASIA_BASE_URL)
                 .path("/lol/match/v5/matches/{matchId}/timeline")
@@ -95,7 +96,7 @@ public class RiotService {
                 MatchTimelineDto.class
         ).getBody();
     }
-
+    /* API 호출 시 필요한 인증 헤더 */
     private HttpEntity<String> createHttpEntity() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Riot-Token", apikey);
