@@ -11,15 +11,15 @@ public class ParticipantFrame {
 
     @ManyToOne(fetch = FetchType.LAZY) // MatchTimeline을 즉시 로딩할 필요가 없다면 LAZY로 설정
     @JoinColumn(name = "timeline_id") // 외래 키 컬럼 이름
-    private MatchTimeline timeline; // MatchTimeline 엔티티 클래스 임포트 필요
+    private MatchTimeline timeline; //
 
-    private int participantId;
-    private int totalGold;
-    private int level;
-    private int minionsKilled;
-    private int jungleMinionsKilled;
-    private int x;
-    private int y;
+    private int participantId; // 참여자 ID
+    private int totalGold; // 총 골드
+    private int level; // 레벨
+    private int minionsKilled; // 미니언 킬 수
+    private int jungleMinionsKilled; // 정글 몬스터 킬 수
+    private int x; // X 좌표
+    private int y; // Y 좌표
 
     // 기본 생성자는 JPA 엔티티에 필수적입니다.
     public ParticipantFrame() {

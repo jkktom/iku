@@ -94,24 +94,7 @@ public class PlayerAnalysisController {
             );
         }
     }
-    
-    /**
-     * 간단한 테스트용 엔드포인트
-     */
-    @GetMapping("/test")
-    public ResponseEntity<?> testEndpoint() {
-        return ResponseEntity.ok(
-            Map.of(
-                "message", "Player Analysis API가 정상 동작 중입니다!",
-                "availableEndpoints", Map.of(
-                    "getMatches", "GET /{gameName}/{tagLine}/matches?count=5",
-                    "analyzeMatch", "POST /analyze"
-                ),
-                "timestamp", System.currentTimeMillis()
-            )
-        );
-    }
-    
+
     /**
      * 분석 요청을 위한 DTO 클래스
      */
