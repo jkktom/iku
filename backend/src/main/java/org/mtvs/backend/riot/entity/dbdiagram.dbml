@@ -10,7 +10,6 @@ Table matches {
 Table champ {
   champ_id varchar [pk]
   champ_name_riot bigint
-  
 }
 
 Table summoner_tag {
@@ -79,9 +78,35 @@ Table event_assisting_participants {
   participant_id int
   // Composite PK if needed: [event_id, participant_id]
 }
- 
 
+// 신규 추가: AI 분석 결과 테이블
+Table match_analysis {
+  id bigint [pk, increment]
+  puuid varchar [ref: > summoner_tag.puuid]
+  match_id varchar [ref: > matches.match_id]
+  target_player_name varchar
+  target_champion varchar
+  ai_request_data jsonb [note: 'AI 요청 데이터 (JSONB 형태)']
+  ai_response_data jsonb [note: 'AI 응답 데이터 (JSONB 형태)']
+  analysis_summary text [note: '분석 요약 텍스트']
+  analysis_status varchar [note: 'REQUESTED/PROCESSING/COMPLETED/FAILED']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+  error_message text [note: '에러 발생시 메시지']
+  
+  indexes {
+    (puuid, match_id) [unique, name: 'uk_match_analysis_puuid_match_id']
+    puuid [name: 'idx_match_analysis_puuid']
+    match_id [name: 'idx_match_analysis_match_id']
+    analysis_status [name: 'idx_match_analysis_status']
+    created_at [name: 'idx_match_analysis_created_at']
+    target_champion [name: 'idx_match_analysis_target_champion']
+  }
+}
 
 Ref: "champ"."champ_name_riot" < "participants"."champion_name"
-
 Ref: "summoner_tag"."puuid" < "participants"."puuid"
+
+// 새로운 관계: AI 분석과 매치/유저 연결
+Ref: "summoner_tag"."puuid" < "match_analysis"."puuid"
+Ref: "matches"."match_id" < "match_analysis"."match_id"

@@ -18,7 +18,10 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        hbm2ddl:
+          auto: create-drop
   flyway:
+    enabled: false # 테스트용 비활성화
     baseline-on-migrate: true
     baseline-version: 1
 chat:
