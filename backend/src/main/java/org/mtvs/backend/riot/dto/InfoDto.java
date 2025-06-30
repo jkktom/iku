@@ -2,6 +2,7 @@ package org.mtvs.backend.riot.dto;
 
 import java.util.List;
 
+//매치 정보용
 public class InfoDto {
     private long gameDuration; //게임 총 시간
     private String gameMode; //게임 모드
@@ -50,5 +51,16 @@ public class InfoDto {
 
     public void setParticipants(List<ParticipantDto> participants) {
         this.participants = participants;
+    }
+
+    @Override
+    public String toString() {
+        return "InfoDto{" +
+                "gameDuration=" + gameDuration +
+                ", gameMode='" + gameMode + '\'' +
+                ", gameVersion='" + gameVersion + '\'' +
+                ", queueId=" + queueId +
+                ", participants=" + participants +
+                '}';
     }
 }

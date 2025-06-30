@@ -1,9 +1,10 @@
 package org.mtvs.backend.riot.dto;
 
+//라이엇 계정의 기본 정보
 public class AccountDto {
-    private String puuid;
-    private String gameName;
-    private String tagLine;
+    private String puuid; //내부적으로 계정 식별에 사용되는 고유값
+    private String gameName; //인게임 닉네임
+    private String tagLine; //라이엇 태크
 
     public AccountDto() {
     }

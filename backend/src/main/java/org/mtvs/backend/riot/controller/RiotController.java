@@ -1,7 +1,6 @@
 package org.mtvs.backend.riot.controller;
 
 import org.mtvs.backend.riot.dto.AccountDto;
-import org.mtvs.backend.riot.dto.AIPlayAnalysisDto;
 import org.mtvs.backend.riot.dto.MatchDetailDto;
 import org.mtvs.backend.riot.dto.MatchTimelineDto;
 import org.mtvs.backend.riot.entity.MatchAnalysis;
@@ -156,18 +155,7 @@ public class RiotController {
         }
     }
 
-    /**
-     * 레거시: AI 분석 요청 (기존 방식, 호환성 유지)
-     */
-    @PostMapping("/analyze")
-    public ResponseEntity<MatchAnalysis> analyzeMatch(@RequestBody AIPlayAnalysisDto analysisRequest) {
-        try {
-            MatchAnalysis result = matchAnalysisService.requestAnalysis(analysisRequest);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
+
     
     /**
      * 분석 결과 조회

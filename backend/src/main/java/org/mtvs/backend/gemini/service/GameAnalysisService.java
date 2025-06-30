@@ -1,8 +1,6 @@
 package org.mtvs.backend.gemini.service;
 
-import org.mtvs.backend.riot.dto.AccountDto;
-import org.mtvs.backend.riot.dto.MatchDetailDto;
-import org.mtvs.backend.riot.dto.MatchTimelineDto;
+import org.mtvs.backend.riot.dto.*;
 import org.mtvs.backend.riot.service.RiotService;
 import org.springframework.stereotype.Service;
 
@@ -111,7 +109,7 @@ public class GameAnalysisService {
      */
     private Map<String, Object> createMatchSummary(MatchDetailDto matchDetail, String playerPuuid, String matchId) {
         // 해당 플레이어 찾기
-        MatchDetailDto.Participant player = matchDetail.getInfo().getParticipants().stream()
+        ParticipantDto player = matchDetail.getInfo().getParticipants().stream()
                 .filter(p -> playerPuuid.equals(p.getPuuid()))
                 .findFirst()
                 .orElse(null);
@@ -156,7 +154,7 @@ public class GameAnalysisService {
         Map<String, Object> playerData = new HashMap<>();
         
         // 1. 기본 플레이어 정보 추출
-        MatchDetailDto.Participant player = matchDetail.getInfo().getParticipants().stream()
+        ParticipantDto player = matchDetail.getInfo().getParticipants().stream()
                 .filter(p -> playerPuuid.equals(p.getPuuid()))
                 .findFirst()
                 .orElse(null);
@@ -169,20 +167,20 @@ public class GameAnalysisService {
         playerData.put("playerInfo", Map.of(
             "summonerName", player.getRiotIdGameName(),
             "championName", player.getChampionName(),
-            "participantId", player.getParticipandId(),
+            "participantId", player.getParticipantId(),
             "teamId", player.getTeamId(),
             "result", player.isWin() ? "승리" : "패배"
         ));
         
         System.out.println("=== 플레이어 정보 디버깅 ===");
-        System.out.println("DTO participandId: " + player.getParticipandId());
-        System.out.println("사용할 participantId: " + player.getParticipandId());
+        System.out.println("DTO participandId: " + player.getParticipantId());
+        System.out.println("사용할 participantId: " + player.getParticipantId());
         System.out.println("플레이어명: " + player.getRiotIdGameName());
         System.out.println("챔피언: " + player.getChampionName());
         
         // participantId 수정: DTO에서 0이 나오면 올바른 ID 찾기
         int correctParticipantId = findCorrectParticipantId(matchDetail, playerPuuid);
-        System.out.println("DTO participantId: " + player.getParticipandId());
+        System.out.println("DTO participantId: " + player.getParticipantId());
         System.out.println("수정된 participantId: " + correctParticipantId);
         
         // 3. 최종 스탯
@@ -222,9 +220,9 @@ public class GameAnalysisService {
         List<Map<String, Object>> playerEvents = new ArrayList<>();
         
         if (matchTimeline.getInfo() != null && matchTimeline.getInfo().getFrames() != null) {
-            for (MatchTimelineDto.Frame frame : matchTimeline.getInfo().getFrames()) {
+            for (FrameDto frame : matchTimeline.getInfo().getFrames()) {
                 if (frame.getEvents() != null) {
-                    for (MatchTimelineDto.Event event : frame.getEvents()) {
+                    for (EventDto event : frame.getEvents()) {
                         // 해당 플레이어와 관련된 이벤트만 추출
                         if (isPlayerRelatedEvent(event, participantId)) {
                             Map<String, Object> eventData = new HashMap<>();
@@ -257,7 +255,7 @@ public class GameAnalysisService {
     /**
      * 이벤트가 특정 플레이어와 관련이 있는지 확인
      */
-    private boolean isPlayerRelatedEvent(MatchTimelineDto.Event event, int participantId) {
+    private boolean isPlayerRelatedEvent(EventDto event, int participantId) {
         // 직접 관련된 경우
         if (Objects.equals(event.getParticipantId(), participantId) ||
             Objects.equals(event.getKillerId(), participantId) ||
@@ -276,7 +274,7 @@ public class GameAnalysisService {
     /**
      * 이벤트 설명 생성
      */
-    private String createEventDescription(MatchTimelineDto.Event event, int participantId) {
+    private String createEventDescription(EventDto event, int participantId) {
         String timeStr = String.format("%.1f분", event.getTimestamp() / 60000.0);
         
         switch (event.getType()) {
@@ -445,10 +443,10 @@ public class GameAnalysisService {
      */
     private int findCorrectParticipantId(MatchDetailDto matchDetail, String playerPuuid) {
         if (matchDetail.getInfo() != null && matchDetail.getInfo().getParticipants() != null) {
-            List<MatchDetailDto.Participant> participants = matchDetail.getInfo().getParticipants();
+            List<ParticipantDto> participants = matchDetail.getInfo().getParticipants();
             
             for (int i = 0; i < participants.size(); i++) {
-                MatchDetailDto.Participant participant = participants.get(i);
+                ParticipantDto participant = participants.get(i);
                 if (playerPuuid.equals(participant.getPuuid())) {
                     // 리스트 인덱스는 0부터 시작하지만, participantId는 1부터 시작
                     int participantId = i + 1;
@@ -486,14 +484,14 @@ public class GameAnalysisService {
             System.out.println("총 프레임 수: " + matchTimeline.getInfo().getFrames().size());
             
             for (int i = 0; i < matchTimeline.getInfo().getFrames().size(); i++) {
-                MatchTimelineDto.Frame frame = matchTimeline.getInfo().getFrames().get(i);
+                FrameDto frame = matchTimeline.getInfo().getFrames().get(i);
                 System.out.println("프레임 " + i + " 처리 중, 타임스탬프: " + frame.getTimestamp());
                 
                 if (frame.getParticipantFrames() != null) {
                     System.out.println("participantFrames 키들: " + frame.getParticipantFrames().keySet());
                     
                     // 다양한 키 형태로 시도
-                    MatchTimelineDto.ParticipantFrame playerFrame = null;
+                    ParticipantFrameDto playerFrame = null;
                     
                     // 방법 1: participantId를 String으로 변환
                     playerFrame = frame.getParticipantFrames().get(String.valueOf(participantId));
@@ -504,11 +502,11 @@ public class GameAnalysisService {
                     
                     if (playerFrame != null) {
                         System.out.println("플레이어 프레임 발견!");
-                        System.out.println("X: " + playerFrame.getX() + ", Y: " + playerFrame.getY());
+                        System.out.println("X: " + playerFrame.getPosition().getX() + ", Y: " + playerFrame.getPosition().getY());
                         System.out.println("레벨: " + playerFrame.getLevel() + ", 골드: " + playerFrame.getTotalGold());
                         
-                        int x = playerFrame.getX();
-                        int y = playerFrame.getY();
+                        int x = playerFrame.getPosition().getX();
+                        int y = playerFrame.getPosition().getY();
                         long timestamp = frame.getTimestamp();
                         
                         if (x > 0 && y > 0) {
@@ -537,8 +535,8 @@ public class GameAnalysisService {
                         // 전체 키를 출력해서 구조 파악
                         if (i < 3) { // 처음 3개 프레임만 상세 출력
                             for (String key : frame.getParticipantFrames().keySet()) {
-                                MatchTimelineDto.ParticipantFrame anyFrame = frame.getParticipantFrames().get(key);
-                                System.out.println("키 '" + key + "': X=" + anyFrame.getX() + ", Y=" + anyFrame.getY() + 
+                                ParticipantFrameDto anyFrame = frame.getParticipantFrames().get(key);
+                                System.out.println("키 '" + key + "': X=" + anyFrame.getPosition().getX() + ", Y=" + anyFrame.getPosition().getY() +
                                                  ", 레벨=" + anyFrame.getLevel());
                             }
                         }
