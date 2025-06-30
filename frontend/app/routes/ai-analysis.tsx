@@ -4,6 +4,7 @@ import { Input } from "~/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { useApi } from "~/utils/api";
+import ReactMarkdown from "react-markdown";
 
 interface AccountInfo {
   puuid: string;
@@ -232,9 +233,11 @@ export default function AIAnalysis() {
                   <div className="mt-4">
                     <strong>분석 요약:</strong>
                     <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
-                      <div className="whitespace-pre-wrap text-sm break-words leading-relaxed">
-                        {analysisResult.analysisRecord.aiResponseData?.analysisResult || 
-                         analysisResult.analysisRecord.analysisSummary}
+                      <div className="prose prose-sm max-w-none">
+                        <ReactMarkdown>
+                          {analysisResult.analysisRecord.aiResponseData?.analysisResult || 
+                           analysisResult.analysisRecord.analysisSummary}
+                        </ReactMarkdown>
                       </div>
                     </div>
                   </div>
