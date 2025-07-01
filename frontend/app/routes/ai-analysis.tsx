@@ -31,6 +31,20 @@ interface AnalysisResult {
   message: string;
 }
 
+interface MultipleAnalysisResult {
+  analysisRecord: {
+    id: number;
+    puuid: string;
+    matchId: string | null;  // 다중 매치 분석에서는 null
+    targetPlayerName: string;
+    status: string;
+    analysisSummary: string;
+    updatedAt: string;
+    aiResponseData: any;
+  };
+  message: string;
+}
+
 export default function AIAnalysis() {
   const apiFetch = useApi();
   
@@ -48,6 +62,11 @@ export default function AIAnalysis() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   
+  // Step 4: Multiple Match Analysis
+  const [multipleAnalysisResult, setMultipleAnalysisResult] = useState<MultipleAnalysisResult | null>(null);
+  const [isLoadingMultipleAnalysis, setIsLoadingMultipleAnalysis] = useState(false);
+  const [matchCount, setMatchCount] = useState<number>(5);
+  
   const [error, setError] = useState<string>("");
 
   const handleGetAccount = async () => {
@@ -60,10 +79,21 @@ export default function AIAnalysis() {
     setError("");
     
     try {
-      const response = await apiFetch(`http://localhost:8080/api/riot/account/${playerName}/${tagLine}`);
+      // 1. Riot API로 계정 정보 조회 (순수 API)
+      const accountResponse = await apiFetch(`http://localhost:8080/api/riot/account/${playerName}/${tagLine}`);
       
-      if (response.account) {
-        setAccountInfo(response.account);
+      if (accountResponse.account) {
+        setAccountInfo(accountResponse.account);
+        
+        // 2. Analysis API로 초기 레코드 생성
+        await apiFetch(`http://localhost:8080/api/analysis/init`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(accountResponse.account)
+        });
+        
         setMatchInfo(null);
         setAnalysisResult(null);
       } else {
@@ -84,12 +114,18 @@ export default function AIAnalysis() {
     setError("");
 
     try {
-      const response = await apiFetch(`http://localhost:8080/api/riot/matches/${accountInfo.puuid}`);
+      // 1. Riot API로 매치 ID 조회 (순수 API)
+      const matchResponse = await apiFetch(`http://localhost:8080/api/riot/matches/${accountInfo.puuid}`);
       
-      if (response.selectedMatchId) {
+      if (matchResponse.selectedMatchId) {
+        // 2. Analysis API로 매치 ID 업데이트
+        await apiFetch(`http://localhost:8080/api/analysis/match/${accountInfo.puuid}/${matchResponse.selectedMatchId}`, {
+          method: 'PUT'
+        });
+        
         setMatchInfo({
-          matchIds: response.matchIds,
-          selectedMatchId: response.selectedMatchId
+          matchIds: matchResponse.matchIds,
+          selectedMatchId: matchResponse.selectedMatchId
         });
         setAnalysisResult(null);
       } else {
@@ -111,16 +147,45 @@ export default function AIAnalysis() {
 
     try {
       const response = await apiFetch(
-        `http://localhost:8080/api/riot/analyze/${accountInfo.puuid}/${matchInfo.selectedMatchId}`,
+        `http://localhost:8080/api/analysis/analyze/${accountInfo.puuid}/${matchInfo.selectedMatchId}`,
         { method: 'POST' }
       );
       
       setAnalysisResult(response);
+      setMultipleAnalysisResult(null); // 단일 분석 시 다중 분석 결과 초기화
     } catch (err) {
       setError("AI 분석에 실패했습니다.");
       console.error(err);
     } finally {
       setIsLoadingAnalysis(false);
+    }
+  };
+
+  const handleMultipleAIAnalysis = async () => {
+    if (!accountInfo) return;
+
+    // 매치 개수 검증
+    if (matchCount < 1 || matchCount > 5) {
+      setError("매치 개수는 1~5개만 선택 가능합니다.");
+      return;
+    }
+
+    setIsLoadingMultipleAnalysis(true);
+    setError("");
+
+    try {
+      const response = await apiFetch(
+        `http://localhost:8080/api/analysis/analyze-multiple/${accountInfo.puuid}?matchCount=${matchCount}`,
+        { method: 'POST' }
+      );
+      
+      setMultipleAnalysisResult(response);
+      setAnalysisResult(null); // 다중 분석 시 단일 분석 결과 초기화
+    } catch (err) {
+      setError(`${matchCount}개 게임 종합 분석에 실패했습니다.`);
+      console.error(err);
+    } finally {
+      setIsLoadingMultipleAnalysis(false);
     }
   };
 
@@ -211,8 +276,8 @@ export default function AIAnalysis() {
       {matchInfo && (
         <Card>
           <CardHeader>
-            <CardTitle>3단계: AI 분석</CardTitle>
-            <CardDescription>AI가 게임 플레이를 분석합니다</CardDescription>
+            <CardTitle>3단계: 단일 게임 AI 분석</CardTitle>
+            <CardDescription>선택된 최신 게임의 상세 분석을 수행합니다</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button 
@@ -220,12 +285,12 @@ export default function AIAnalysis() {
               disabled={isLoadingAnalysis}
               className="w-full"
             >
-              {isLoadingAnalysis ? "분석 중..." : "AI 분석 시작"}
+              {isLoadingAnalysis ? "분석 중..." : "단일 게임 AI 분석"}
             </Button>
             
             {analysisResult && (
               <div className="bg-purple-50 border border-purple-200 p-4 rounded">
-                <h3 className="font-bold text-lg mb-2">분석 결과</h3>
+                <h3 className="font-bold text-lg mb-2">단일 게임 분석 결과</h3>
                 <div className="space-y-2">
                   <p><strong>플레이어:</strong> {analysisResult.analysisRecord.targetPlayerName}</p>
                   <p><strong>상태:</strong> {analysisResult.analysisRecord.status}</p>
@@ -248,6 +313,75 @@ export default function AIAnalysis() {
                       <div className="bg-gray-50 p-3 rounded border mt-2 min-h-32 max-h-none">
                         <pre className="whitespace-pre-wrap text-xs break-words leading-relaxed overflow-x-auto">
                           {JSON.stringify(analysisResult.analysisRecord.aiResponseData, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 4: Multiple Match Analysis */}
+      {accountInfo && (
+        <Card>
+          <CardHeader>
+            <CardTitle>4단계: 다중 게임 종합 분석</CardTitle>
+            <CardDescription>최근 여러 게임을 종합하여 상세 분석합니다 (1~5개)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="matchCount">분석할 게임 수</Label>
+              <select 
+                id="matchCount"
+                value={matchCount} 
+                onChange={(e) => setMatchCount(Number(e.target.value))}
+                className="w-full p-2 border border-gray-300 rounded mt-1"
+              >
+                <option value={1}>1개 게임</option>
+                <option value={2}>2개 게임</option>
+                <option value={3}>3개 게임</option>
+                <option value={4}>4개 게임</option>
+                <option value={5}>5개 게임 (추천)</option>
+              </select>
+            </div>
+            
+            <Button 
+              onClick={handleMultipleAIAnalysis} 
+              disabled={isLoadingMultipleAnalysis}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              {isLoadingMultipleAnalysis ? `${matchCount}개 게임 분석 중...` : `${matchCount}개 게임 종합 분석`}
+            </Button>
+            
+            {multipleAnalysisResult && (
+              <div className="bg-green-50 border border-green-200 p-4 rounded">
+                <h3 className="font-bold text-lg mb-2">종합 분석 결과</h3>
+                <div className="space-y-2">
+                  <p><strong>플레이어:</strong> {multipleAnalysisResult.analysisRecord.targetPlayerName}</p>
+                  <p><strong>상태:</strong> {multipleAnalysisResult.analysisRecord.status}</p>
+                  <p><strong>분석 완료 시간:</strong> {new Date(multipleAnalysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
+                  <p><strong>메시지:</strong> {multipleAnalysisResult.message}</p>
+                  <div className="mt-4">
+                    <strong>종합 분석 요약:</strong>
+                    <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
+                      <div className="prose prose-sm max-w-none">
+                        <ReactMarkdown>
+                          {multipleAnalysisResult.analysisRecord.aiResponseData?.analysisResult || 
+                           multipleAnalysisResult.analysisRecord.analysisSummary}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {multipleAnalysisResult.analysisRecord.aiResponseData && (
+                    <div className="mt-4">
+                      <strong>상세 분석 데이터:</strong>
+                      <div className="bg-gray-50 p-3 rounded border mt-2 max-h-60 overflow-y-auto">
+                        <pre className="whitespace-pre-wrap text-xs break-words leading-relaxed">
+                          {JSON.stringify(multipleAnalysisResult.analysisRecord.aiResponseData, null, 2)}
                         </pre>
                       </div>
                     </div>
