@@ -1,13 +1,13 @@
-package org.mtvs.backend.riot.service;
+package org.mtvs.backend.analysis.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mtvs.backend.gemini.service.GameAnalysisService;
 import org.mtvs.backend.gemini.service.GeminiService;
-import org.mtvs.backend.riot.Repository.MatchAnalysisRepository;
+import org.mtvs.backend.analysis.repository.MatchAnalysisRepository;
 import org.mtvs.backend.riot.dto.AccountDto;
-import org.mtvs.backend.riot.dto.AIAnalysisResponseDto;
+import org.mtvs.backend.analysis.dto.AIAnalysisResponseDto;
 
-import org.mtvs.backend.riot.entity.MatchAnalysis;
+import org.mtvs.backend.analysis.entity.MatchAnalysis;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -148,6 +148,110 @@ public class MatchAnalysisService {
         } catch (Exception e) {
             logger.error("매치 ID 업데이트 실패: ", e);
             throw new RuntimeException("매치 ID 업데이트 실패", e);
+        }
+        
+        return analysis;
+    }
+
+    /**
+     * 다중 매치 AI 분석 수행 (1~5개 매치)
+     */
+    public MatchAnalysis performMultipleAIAnalysis(String puuid, int matchCount) {
+        logger.info("=== 다중 매치 AI 분석 수행 ===");
+        logger.info("PUUID: {}", puuid);
+        logger.info("매치 개수: {}", matchCount);
+        
+        // 입력값 검증
+        if (puuid == null || puuid.trim().isEmpty()) {
+            throw new IllegalArgumentException("PUUID는 필수입니다.");
+        }
+        if (matchCount < 1 || matchCount > 5) {
+            throw new IllegalArgumentException("매치 개수는 1~5개만 가능합니다. 입력값: " + matchCount);
+        }
+        
+        // 게임명과 태그 추출 (기존 데이터에서)
+        String gameName = "Unknown";
+        String tagLine = "KR1";
+        
+        // 최신 레코드에서 게임명/태그 추출 시도
+        List<MatchAnalysis> recentRecords = matchAnalysisRepository.findByPuuidOrderByCreatedAtDesc(puuid);
+        if (!recentRecords.isEmpty()) {
+            MatchAnalysis recentRecord = recentRecords.get(0);
+            Map<String, Object> requestData = recentRecord.getAiRequestData();
+            if (requestData != null) {
+                if (requestData.containsKey("gameName")) {
+                    gameName = (String) requestData.get("gameName");
+                }
+                if (requestData.containsKey("tagLine")) {
+                    tagLine = (String) requestData.get("tagLine");
+                }
+            }
+            if (recentRecord.getTargetPlayerName() != null && !recentRecord.getTargetPlayerName().trim().isEmpty()) {
+                gameName = recentRecord.getTargetPlayerName();
+            }
+        }
+        
+        logger.info("다중 분석 대상: {}#{}, {} 게임", gameName, tagLine, matchCount);
+        
+        // 새 분석 레코드 생성
+        MatchAnalysis analysis = new MatchAnalysis();
+        analysis.setPuuid(puuid);
+        analysis.setTargetPlayerName(gameName);
+        analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
+        // matchId는 null로 설정 (다중 매치이므로)
+        
+        // 요청 데이터 구성
+        Map<String, Object> requestData = new HashMap<>();
+        requestData.put("step", "MULTIPLE_MATCH_ANALYSIS");
+        requestData.put("puuid", puuid);
+        requestData.put("gameName", gameName);
+        requestData.put("tagLine", tagLine);
+        requestData.put("matchCount", matchCount);
+        requestData.put("timestamp", System.currentTimeMillis());
+        analysis.setAiRequestData(requestData);
+        
+        try {
+            analysis = matchAnalysisRepository.save(analysis);
+            logger.info("다중 분석 레코드 생성 완료: ID={}", analysis.getId());
+            
+            // 상태를 PROCESSING으로 변경
+            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.PROCESSING);
+            matchAnalysisRepository.save(analysis);
+            
+            // GameAnalysisService를 통한 다중 매치 분석
+            logger.info("GameAnalysisService를 통한 다중 매치 분석 시작...");
+            String aiAnalysisResult = gameAnalysisService.analyzePlayerMultipleMatches(gameName, tagLine, matchCount);
+            
+            logger.info("다중 매치 AI 분석 완료! 결과 길이: {} 문자", aiAnalysisResult.length());
+            
+            // AI 응답 데이터 구성
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("analysisResult", aiAnalysisResult);
+            responseData.put("analysisTimestamp", System.currentTimeMillis());
+            responseData.put("analysisMethod", "GameAnalysisService_Multiple");
+            responseData.put("matchCount", matchCount);
+            responseData.put("puuid", puuid);
+            responseData.put("analysisType", "MULTIPLE_MATCH");
+            
+            // 결과 저장
+            analysis.setAiResponseData(responseData);
+            analysis.setAnalysisSummary(aiAnalysisResult);
+            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.COMPLETED);
+            
+            // 요청 데이터에 분석 완료 표시 추가
+            requestData.put("multipleAnalysisCompleted", true);
+            requestData.put("analysisCompletedTimestamp", System.currentTimeMillis());
+            analysis.setAiRequestData(requestData);
+            
+            analysis = matchAnalysisRepository.save(analysis);
+            logger.info("다중 매치 분석 결과 저장 완료! 레코드 ID: {}", analysis.getId());
+            
+        } catch (Exception e) {
+            logger.error("다중 매치 AI 분석 실패: ", e);
+            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.FAILED);
+            analysis.setErrorMessage("다중 매치 AI 분석 실패: " + e.getMessage());
+            matchAnalysisRepository.save(analysis);
+            throw new RuntimeException("다중 매치 AI 분석 실패", e);
         }
         
         return analysis;
@@ -436,7 +540,6 @@ public class MatchAnalysisService {
         
         // 예시: AI 응답에서 특정 섹션 추출 (향후 구현)
         // if (aiResponse.contains("## 성능 분석")) {
-        //     AIAnalysisResponseDto.PerformanceAnalysis performance = parsePerformanceSection(aiResponse);
         //     dto.setPerformanceAnalysis(performance);
         // }
         
@@ -468,6 +571,14 @@ public class MatchAnalysisService {
         }
         
         return response;
+    }
+
+    /**
+     * 다중 매치 AI 분석 수행 후 컨트롤러 응답용 Map 반환 (편의 메소드)
+     */
+    public Map<String, Object> performMultipleAIAnalysisAndGetResponse(String puuid, int matchCount) {
+        MatchAnalysis result = performMultipleAIAnalysis(puuid, matchCount);
+        return createAnalysisResponseMap(result);
     }
 
     /**

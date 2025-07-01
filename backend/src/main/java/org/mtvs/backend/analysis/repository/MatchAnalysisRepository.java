@@ -1,6 +1,6 @@
-package org.mtvs.backend.riot.Repository;
+package org.mtvs.backend.analysis.repository;
 
-import org.mtvs.backend.riot.entity.MatchAnalysis;
+import org.mtvs.backend.analysis.entity.MatchAnalysis;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
