@@ -1,4 +1,4 @@
-package org.mtvs.backend.riot.entity;
+package org.mtvs.backend.analysis.entity;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;

@@ -1,4 +1,4 @@
-package org.mtvs.backend.riot.dto;
+package org.mtvs.backend.analysis.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
