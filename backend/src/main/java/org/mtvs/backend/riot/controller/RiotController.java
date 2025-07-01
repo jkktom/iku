@@ -29,18 +29,18 @@ public class RiotController {
     public ResponseEntity<Map<String, Object>> getAccountInfo(
             @PathVariable String gameName,
             @PathVariable String tagLine) {
-        
+
         try {
             // Riot API로 계정 정보 조회
             AccountDto account = riotService.getAccountInfo(gameName, tagLine);
-            
+
             // 응답 구성 (순수 계정 정보만)
             Map<String, Object> response = new HashMap<>();
             response.put("account", account);
             response.put("message", "계정 정보 조회 완료");
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -56,42 +56,44 @@ public class RiotController {
             @PathVariable String puuid,
             @RequestParam(defaultValue = "0") int start,
             @RequestParam(defaultValue = "1") int count) {
-        
+
         try {
             // Riot API로 매치 ID 목록 조회
             List<String> matchIds = riotService.getMatchIds(puuid, start, count);
-            
+
             // 응답 구성 (순수 매치 데이터만)
             Map<String, Object> response = new HashMap<>();
             response.put("matchIds", matchIds);
             response.put("count", matchIds != null ? matchIds.size() : 0);
-            
+
             if (matchIds == null || matchIds.isEmpty()) {
                 response.put("message", "매치 데이터가 없습니다.");
             } else {
                 response.put("selectedMatchId", matchIds.get(0)); // 첫 번째 매치 ID
                 response.put("message", "매치 ID 목록 조회 완료");
             }
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }
-    
+
     /**
      * 매치 상세 정보 조회 (순수 Riot API)
+     * 게임 참여인원에 대한 정보(인게임 닉네임, 라이엇태그, 플레이한 챔피언 이름, 참여자Id, 시야점수, 킬뎃 등)
      */
     @GetMapping("/matches/{matchId}/detail")
     public MatchDetailDto getMatchDetail(@PathVariable String matchId){
         return riotService.getMatchDetail(matchId);
     }
-    
+
     /**
      * 매치 타임라인 조회 (순수 Riot API)
+     * 타임라인별로 게임 데이터 조회
      */
     @GetMapping("/matches/{matchId}/timeline")
     public MatchTimelineDto getMatchTimeline(@PathVariable String matchId) {

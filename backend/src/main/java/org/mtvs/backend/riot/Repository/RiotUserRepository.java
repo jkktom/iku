@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RiotUserRepository extends JpaRepository<RiotUser, Long> {
     RiotUser findByPuuid(String puuid);
+    boolean existsByPuuid(String puuid);
 }

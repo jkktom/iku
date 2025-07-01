@@ -4,10 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mtvs.backend.gemini.service.GameAnalysisService;
 import org.mtvs.backend.gemini.service.GeminiService;
 import org.mtvs.backend.analysis.repository.MatchAnalysisRepository;
+import org.mtvs.backend.riot.Repository.RiotUserRepository;
 import org.mtvs.backend.riot.dto.AccountDto;
 import org.mtvs.backend.analysis.dto.AIAnalysisResponseDto;
 
 import org.mtvs.backend.analysis.entity.MatchAnalysis;
+import org.mtvs.backend.riot.entity.RiotUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,16 +31,19 @@ public class MatchAnalysisService {
     private final GameAnalysisService gameAnalysisService;
     private final GeminiService geminiService;
     private final ObjectMapper objectMapper;
+    private final RiotUserRepository riotUserRepository;
 
     @Autowired
     public MatchAnalysisService(MatchAnalysisRepository matchAnalysisRepository, 
                                GameAnalysisService gameAnalysisService,
                                GeminiService geminiService,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper,
+                               RiotUserRepository riotUserRepository) {
         this.matchAnalysisRepository = matchAnalysisRepository;
         this.gameAnalysisService = gameAnalysisService;
         this.geminiService = geminiService;
         this.objectMapper = objectMapper;
+        this.riotUserRepository = riotUserRepository;
     }
 
     /**
@@ -76,7 +81,17 @@ public class MatchAnalysisService {
         analysis.setTargetPlayerName(account.getGameName());
         analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
         // matchId는 의도적으로 null로 설정 (2단계에서 설정됨)
-        
+
+        //RiotUser 저장
+        if(!riotUserRepository.existsByPuuid(account.getPuuid())){
+            RiotUser riotUser = new RiotUser();
+            riotUser.setPuuid(account.getPuuid());
+            riotUser.setGameName(account.getGameName());
+            riotUser.setTagLine(account.getTagLine());
+            riotUserRepository.save(riotUser);
+            logger.info("Riotuser 저장 완료: {}", account.getPuuid());
+        }
+
         // 계정 정보를 요청 데이터로 저장
         Map<String, Object> accountData = new HashMap<>();
         accountData.put("step", "ACCOUNT_LOOKUP");
