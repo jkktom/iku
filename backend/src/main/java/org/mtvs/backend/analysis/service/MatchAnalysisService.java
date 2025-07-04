@@ -82,7 +82,7 @@ public class MatchAnalysisService {
         analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
         // matchId는 의도적으로 null로 설정 (2단계에서 설정됨)
 
-        //RiotUser 저장
+        //RiotUser 엔티티 저장
         if(!riotUserRepository.existsByPuuid(account.getPuuid())){
             RiotUser riotUser = new RiotUser();
             riotUser.setPuuid(account.getPuuid());
