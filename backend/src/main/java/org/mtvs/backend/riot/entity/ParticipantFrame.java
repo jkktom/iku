@@ -12,7 +12,6 @@ public class ParticipantFrame {
     @ManyToOne(fetch = FetchType.LAZY) // MatchTimeline을 즉시 로딩할 필요가 없다면 LAZY로 설정
     @JoinColumn(name = "timeline_id") // 외래 키 컬럼 이름
     private MatchTimeline timeline; //
-
     private int participantId; // 참여자 ID
     private int totalGold; // 총 골드
     private int level; // 레벨

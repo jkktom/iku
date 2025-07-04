@@ -1,6 +1,6 @@
 package org.mtvs.backend.riot.controller;
 
-/*챔피언 조회 컨트롤러*/
+/*챔피언 동기화 및 조회 컨트롤러*/
 
 import org.mtvs.backend.riot.dto.ChampionDto;
 import org.mtvs.backend.riot.service.ChampionService;
