@@ -4,22 +4,34 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mtvs.backend.gemini.service.GameAnalysisService;
 import org.mtvs.backend.gemini.service.GeminiService;
 import org.mtvs.backend.analysis.repository.MatchAnalysisRepository;
-import org.mtvs.backend.riot.Repository.RiotUserRepository;
+import org.mtvs.backend.riot.Repository.*;
 import org.mtvs.backend.riot.dto.AccountDto;
 import org.mtvs.backend.analysis.dto.AIAnalysisResponseDto;
 
 import org.mtvs.backend.analysis.entity.MatchAnalysis;
-import org.mtvs.backend.riot.entity.RiotUser;
+import org.mtvs.backend.riot.dto.MatchDetailDto;
+import org.mtvs.backend.riot.dto.MatchTimelineDto;
+import org.mtvs.backend.riot.entity.*;
+import org.mtvs.backend.riot.service.RiotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.*;
+
+import org.mtvs.backend.riot.dto.*;
+import org.mtvs.backend.riot.dto.InfoDto;
+
+import org.mtvs.backend.riot.Repository.MatchRepository;
+import org.mtvs.backend.riot.Repository.ParticipantRepository;
+import org.mtvs.backend.riot.Repository.MatchTimelineRepository;
+import org.mtvs.backend.riot.Repository.ParticipantFrameRepository;
+import org.mtvs.backend.riot.Repository.MatchEventRepository;
 
 @Service
 @Transactional
@@ -32,18 +44,144 @@ public class MatchAnalysisService {
     private final GeminiService geminiService;
     private final ObjectMapper objectMapper;
     private final RiotUserRepository riotUserRepository;
+    private final MatchRepository matchRepository;
+    private final ParticipantRepository participantRepository;
+    private final MatchTimelineRepository matchTimelineRepository;
+    private final ParticipantFrameRepository participantFrameRepository;
+    private final MatchEventRepository matchEventRepository;
+    private final RiotService riotService;
 
     @Autowired
-    public MatchAnalysisService(MatchAnalysisRepository matchAnalysisRepository, 
-                               GameAnalysisService gameAnalysisService,
-                               GeminiService geminiService,
-                               ObjectMapper objectMapper,
-                               RiotUserRepository riotUserRepository) {
+    public MatchAnalysisService(MatchAnalysisRepository matchAnalysisRepository,
+                                GameAnalysisService gameAnalysisService,
+                                GeminiService geminiService,
+                                ObjectMapper objectMapper,
+                                RiotUserRepository riotUserRepository, MatchRepository matchRepository, ParticipantRepository participantRepository, MatchTimelineRepository matchTimelineRepository, ParticipantFrameRepository participantFrameRepository, MatchEventRepository matchEventRepository, RiotService riotService) {
         this.matchAnalysisRepository = matchAnalysisRepository;
         this.gameAnalysisService = gameAnalysisService;
         this.geminiService = geminiService;
         this.objectMapper = objectMapper;
         this.riotUserRepository = riotUserRepository;
+        this.matchRepository = matchRepository;
+        this.participantRepository = participantRepository;
+        this.matchTimelineRepository = matchTimelineRepository;
+        this.participantFrameRepository = participantFrameRepository;
+        this.matchEventRepository = matchEventRepository;
+        this.riotService = riotService;
+    }
+
+    /**
+     * MatchDetailDto를 Map으로 변환
+     */
+    private Map<String, Object> convertMatchDetailToMap(MatchDetailDto matchDetail) {
+        Map<String, Object> matchData = new HashMap<>();
+
+        if (matchDetail.getInfo() != null) {
+            InfoDto info = matchDetail.getInfo();
+
+            matchData.put("gameDuration", info.getGameDuration());
+            matchData.put("gameMode", info.getGameMode());
+            matchData.put("gameVersion", info.getGameVersion());
+            matchData.put("queueId", info.getQueueId());
+
+            // participants 변환
+            List<Map<String, Object>> participants = new ArrayList<>();
+            if (info.getParticipants() != null) {
+                for (ParticipantDto participant : info.getParticipants()) {
+                    Map<String, Object> participantMap = new HashMap<>();
+                    participantMap.put("participantId", participant.getParticipantId());
+                    participantMap.put("puuid", participant.getPuuid());
+                    participantMap.put("riotIdGameName", participant.getRiotIdGameName());
+                    participantMap.put("riotIdTagline", participant.getRiotIdTagline());
+                    participantMap.put("summonerName", participant.getSummonerName());
+                    participantMap.put("championName", participant.getChampionName());
+                    participantMap.put("kills", participant.getKills());
+                    participantMap.put("deaths", participant.getDeaths());
+                    participantMap.put("assists", participant.getAssists());
+                    participantMap.put("totalDamageDealtToChampions", participant.getTotalDamageDealtToChampions());
+                    participantMap.put("totalDamageTaken", participant.getTotalDamageTaken());
+                    participantMap.put("visionScore", participant.getVisionScore());
+                    participantMap.put("goldEarned", participant.getGoldEarned());
+                    participantMap.put("totalMinionsKilled", participant.getTotalMinionsKilled());
+                    participantMap.put("neutralMinionsKilled", participant.getNeutralMinionsKilled());
+                    participantMap.put("teamId", participant.getTeamId());
+                    participantMap.put("win", participant.isWin());
+
+                    participants.add(participantMap);
+                }
+            }
+            matchData.put("participants", participants);
+        }
+
+        return matchData;
+    }
+
+    /**
+     * MatchTimelineDto를 Map으로 변환
+     */
+    private Map<String, Object> convertMatchTimelineToMap(MatchTimelineDto matchTimeline) {
+        Map<String, Object> timelineData = new HashMap<>();
+
+        if (matchTimeline.getInfo() != null && matchTimeline.getInfo().getFrames() != null) {
+            List<Map<String, Object>> frames = new ArrayList<>();
+
+            for (FrameDto frame : matchTimeline.getInfo().getFrames()) {
+                Map<String, Object> frameMap = new HashMap<>();
+                frameMap.put("timestamp", frame.getTimestamp());
+
+                // participantFrames 변환
+                Map<String, Object> participantFrames = new HashMap<>();
+                if (frame.getParticipantFrames() != null) {
+                    for (Map.Entry<String, ParticipantFrameDto> entry : frame.getParticipantFrames().entrySet()) {
+                        ParticipantFrameDto participantFrame = entry.getValue();
+                        Map<String, Object> frameInfo = new HashMap<>();
+
+                        // position 정보
+                        Map<String, Object> position = new HashMap<>();
+                        position.put("x", participantFrame.getPosition().getX());
+                        position.put("y", participantFrame.getPosition().getY());
+                        frameInfo.put("position", position);
+
+                        // 기타 정보들
+                        frameInfo.put("totalGold", participantFrame.getTotalGold());
+                        frameInfo.put("level", participantFrame.getLevel());
+                        frameInfo.put("minionsKilled", participantFrame.getMinionsKilled());
+                        frameInfo.put("jungleMinionsKilled", participantFrame.getJungleMinionsKilled());
+
+                        participantFrames.put(entry.getKey(), frameInfo);
+                    }
+                }
+                frameMap.put("participantFrames", participantFrames);
+
+                // events 변환
+                List<Map<String, Object>> events = new ArrayList<>();
+                if (frame.getEvents() != null) {
+                    for (EventDto event : frame.getEvents()) {
+                        Map<String, Object> eventMap = new HashMap<>();
+                        eventMap.put("type", event.getType());
+                        eventMap.put("timestamp", event.getTimestamp());
+                        eventMap.put("participantId", event.getParticipantId());
+                        eventMap.put("killerId", event.getKillerId());
+                        eventMap.put("victimId", event.getVictimId());
+                        eventMap.put("assistingParticipantIds", event.getAssistingParticipantIds());
+                        eventMap.put("monsterType", event.getMonsterType());
+                        eventMap.put("buildingType", event.getBuildingType());
+                        eventMap.put("laneType", event.getLaneType());
+                        eventMap.put("towerType", event.getTowerType());
+                        eventMap.put("itemId", event.getItemId());
+
+                        events.add(eventMap);
+                    }
+                }
+                frameMap.put("events", events);
+
+                frames.add(frameMap);
+            }
+
+            timelineData.put("frames", frames);
+        }
+
+        return timelineData;
     }
 
     /**
@@ -361,6 +499,340 @@ public class MatchAnalysisService {
         
         return matchAnalysisRepository.save(analysis);
     }
+    /*DB 저장 로직*/
+    private void saveMatchDataToDB(String matchId, Map<String, Object> matchData, Map<String, Object> timelineData) {
+        try {
+            logger.info("=== 매치 데이터 DB 저장 시작: {} ===", matchId);
+            logger.info("matchData 크기: {}", matchData != null ? matchData.size() : 0);
+            logger.info("timelineData 크기: {}", timelineData != null ? timelineData.size() : 0);
+            
+            // 1. Match 엔티티 저장
+            logger.info("1단계: Match 엔티티 생성 시작");
+            Match match = new Match();
+            match.setMatchId(matchId);
+            
+            // null 체크 추가
+            Object gameDurationObj = matchData.get("gameDuration");
+            if (gameDurationObj != null) {
+                match.setGameDuration((Long) gameDurationObj);
+                logger.info("gameDuration 설정: {}", gameDurationObj);
+            } else {
+                logger.warn("gameDuration이 null입니다");
+                match.setGameDuration(0L);
+            }
+            
+            Object gameModeObj = matchData.get("gameMode");
+            if (gameModeObj != null) {
+                match.setGameMode((String) gameModeObj);
+                logger.info("gameMode 설정: {}", gameModeObj);
+            } else {
+                logger.warn("gameMode가 null입니다");
+                match.setGameMode("Unknown");
+            }
+            
+            Object gameVersionObj = matchData.get("gameVersion");
+            if (gameVersionObj != null) {
+                match.setGameVersion((String) gameVersionObj);
+                logger.info("gameVersion 설정: {}", gameVersionObj);
+            } else {
+                logger.warn("gameVersion이 null입니다");
+                match.setGameVersion("Unknown");
+            }
+            
+            Object queueIdObj = matchData.get("queueId");
+            if (queueIdObj != null) {
+                match.setQueueId((Integer) queueIdObj);
+                logger.info("queueId 설정: {}", queueIdObj);
+            } else {
+                logger.warn("queueId가 null입니다");
+                match.setQueueId(0);
+            }
+
+            // Match 엔티티 저장
+            match = matchRepository.save(match);
+            logger.info("Match 엔티티 저장 완료: matchId={}", match.getMatchId());
+
+            // Participant 엔티티들 저장
+            logger.info("2단계: Participant 엔티티들 생성 시작");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> participantsData = (List<Map<String, Object>>) matchData.get("participants");
+
+            if (participantsData != null) {
+                logger.info("참가자 수: {}", participantsData.size());
+                
+                for (int i = 0; i < participantsData.size(); i++) {
+                    Map<String, Object> participantData = participantsData.get(i);
+                    logger.info("참가자 {} 처리 중", i + 1);
+                    
+                    try {
+                        Participant participant = new Participant();
+                        participant.setMatch(match);
+                        
+                        // 각 필드별 null 체크 및 안전한 변환
+                        Object participantIdObj = participantData.get("participantId");
+                        if (participantIdObj != null) {
+                            participant.setParticipantId((Integer) participantIdObj);
+                        } else {
+                            logger.warn("participantId가 null입니다. 기본값 0 설정");
+                            participant.setParticipantId(0);
+                        }
+                        
+                        Object puuidObj = participantData.get("puuid");
+                        if (puuidObj != null) {
+                            participant.setPuuid((String) puuidObj);
+                        } else {
+                            logger.warn("puuid가 null입니다. 기본값 설정");
+                            participant.setPuuid("unknown");
+                        }
+                        
+                        Object gameNameObj = participantData.get("riotIdGameName");
+                        if (gameNameObj != null) {
+                            participant.setRiotIdGameName((String) gameNameObj);
+                        } else {
+                            participant.setRiotIdGameName("Unknown");
+                        }
+                        
+                        Object taglineObj = participantData.get("riotIdTagline");
+                        if (taglineObj != null) {
+                            participant.setRiotIdTagline((String) taglineObj);
+                        } else {
+                            participant.setRiotIdTagline("Unknown");
+                        }
+                        
+                        Object summonerNameObj = participantData.get("summonerName");
+                        if (summonerNameObj != null) {
+                            participant.setSummonerName((String) summonerNameObj);
+                        } else {
+                            participant.setSummonerName("Unknown");
+                        }
+                        
+                        Object championNameObj = participantData.get("championName");
+                        if (championNameObj != null) {
+                            participant.setChampionName((String) championNameObj);
+                        } else {
+                            participant.setChampionName("Unknown");
+                        }
+                        
+                        // 숫자 필드들
+                        participant.setKills(getIntegerSafely(participantData, "kills", 0));
+                        participant.setDeaths(getIntegerSafely(participantData, "deaths", 0));
+                        participant.setAssists(getIntegerSafely(participantData, "assists", 0));
+                        participant.setTotalDamageDealtToChampions(getIntegerSafely(participantData, "totalDamageDealtToChampions", 0));
+                        participant.setTotalDamageTaken(getIntegerSafely(participantData, "totalDamageTaken", 0));
+                        participant.setVisionScore(getIntegerSafely(participantData, "visionScore", 0));
+                        participant.setGoldEarned(getIntegerSafely(participantData, "goldEarned", 0));
+                        participant.setTotalMinionsKilled(getIntegerSafely(participantData, "totalMinionsKilled", 0));
+                        participant.setNeutralMinionsKilled(getIntegerSafely(participantData, "neutralMinionsKilled", 0));
+                        participant.setTeamId(getIntegerSafely(participantData, "teamId", 0));
+                        
+                        Object winObj = participantData.get("win");
+                        if (winObj != null) {
+                            participant.setWin((Boolean) winObj);
+                        } else {
+                            participant.setWin(false);
+                        }
+
+                        // RiotUser 관계 설정 (수정된 부분)
+                        String puuid = participant.getPuuid();
+                        if (puuid != null && !puuid.trim().isEmpty() && !"unknown".equals(puuid)) {
+                            try {
+                                // Optional.ofNullable() 사용
+                                RiotUser existingRiotUser = riotUserRepository.findByPuuid(puuid);
+                                if (existingRiotUser != null) {
+                                    participant.setRiotUser(existingRiotUser);
+                                    logger.info("기존 RiotUser 연결: {}", puuid);
+                                } else {
+                                    // RiotUser가 없으면 새로 생성
+                                    RiotUser riotUser = new RiotUser();
+                                    riotUser.setPuuid(puuid);
+                                    riotUser.setGameName(participant.getRiotIdGameName());
+                                    riotUser.setTagLine(participant.getRiotIdTagline());
+                                    riotUser = riotUserRepository.save(riotUser);
+                                    participant.setRiotUser(riotUser);
+                                    logger.info("새 RiotUser 생성 및 연결: {}", puuid);
+                                }
+                            } catch (Exception e) {
+                                logger.warn("RiotUser 관계 설정 실패: {}", e.getMessage());
+                                // RiotUser 관계 없이 계속 진행
+                            }
+                        }
+                        
+                        participant = participantRepository.save(participant);
+                        logger.info("Participant 저장 완료: ID={}, Champion={}", participant.getParticipantId(), participant.getChampionName());
+                        
+                    } catch (Exception e) {
+                        logger.error("참가자 {} 저장 실패: {}", i + 1, e.getMessage(), e);
+                        // 개별 참가자 실패는 전체 프로세스를 중단하지 않음
+                    }
+                }
+            } else {
+                logger.warn("participants 데이터가 null입니다");
+            }
+
+            // MatchTimeline 엔티티들 저장
+            logger.info("3단계: MatchTimeline 엔티티들 생성 시작");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> frames = (List<Map<String, Object>>) timelineData.get("frames");
+
+            if (frames != null) {
+                logger.info("타임라인 프레임 수: {}", frames.size());
+                
+                for (int i = 0; i < frames.size(); i++) {
+                    Map<String, Object> frameData = frames.get(i);
+                    logger.info("프레임 {} 처리 중", i + 1);
+                    
+                    try {
+                        MatchTimeline timeline = new MatchTimeline();
+                        timeline.setMatch(match);
+                        
+                        Object timestampObj = frameData.get("timestamp");
+                        if (timestampObj != null) {
+                            timeline.setTimestamp((Long) timestampObj);
+                        } else {
+                            timeline.setTimestamp(0L);
+                        }
+
+                        timeline = matchTimelineRepository.save(timeline);
+                        logger.info("MatchTimeline 저장 완료: timestamp={}", timeline.getTimestamp());
+
+                        // ParticipantFrame 엔티티들 저장
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> participantFramesData = (Map<String, Object>) frameData.get("participantFrames");
+
+                        if (participantFramesData != null) {
+                            for (Map.Entry<String, Object> entry : participantFramesData.entrySet()) {
+                                try {
+                                    @SuppressWarnings("unchecked")
+                                    Map<String, Object> frameInfo = (Map<String, Object>) entry.getValue();
+
+                                    ParticipantFrame participantFrame = new ParticipantFrame();
+                                    participantFrame.setTimeline(timeline);
+                                    participantFrame.setParticipantId(Integer.parseInt(entry.getKey()));
+
+                                    // position 정보
+                                    @SuppressWarnings("unchecked")
+                                    Map<String, Object> position = (Map<String, Object>) frameInfo.get("position");
+                                    if (position != null) {
+                                        participantFrame.setX(getIntegerSafely(position, "x", 0));
+                                        participantFrame.setY(getIntegerSafely(position, "y", 0));
+                                    } else {
+                                        participantFrame.setX(0);
+                                        participantFrame.setY(0);
+                                    }
+                                    
+                                    // 기타 정보들
+                                    participantFrame.setTotalGold(getIntegerSafely(frameInfo, "totalGold", 0));
+                                    participantFrame.setLevel(getIntegerSafely(frameInfo, "level", 1));
+                                    participantFrame.setMinionsKilled(getIntegerSafely(frameInfo, "minionsKilled", 0));
+                                    participantFrame.setJungleMinionsKilled(getIntegerSafely(frameInfo, "jungleMinionsKilled", 0));
+
+                                    participantFrameRepository.save(participantFrame);
+                                } catch (Exception e) {
+                                    logger.warn("ParticipantFrame 저장 실패: {}", e.getMessage());
+                                }
+                            }
+                        }
+                        
+                        // MatchEvent 엔티티들 저장
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> eventsData = (List<Map<String, Object>>) frameData.get("events");
+
+                        if (eventsData != null) {
+                            for (Map<String, Object> eventData : eventsData) {
+                                try {
+                                    MatchEvent event = new MatchEvent();
+                                    event.setTimeline(timeline);
+                                    
+                                    Object typeObj = eventData.get("type");
+                                    if (typeObj != null) {
+                                        event.setType((String) typeObj);
+                                    } else {
+                                        event.setType("UNKNOWN");
+                                    }
+                                    
+                                    Object eventTimestampObj = eventData.get("timestamp");
+                                    if (eventTimestampObj != null) {
+                                        event.setTimestamp((Long) eventTimestampObj);
+                                    } else {
+                                        event.setTimestamp(0L);
+                                    }
+                                    
+                                    event.setParticipantId(getIntegerSafely(eventData, "participantId", 0));
+
+                                    // 선택적 필드들
+                                    if (eventData.containsKey("killerId")) {
+                                        event.setKillerId(getIntegerSafely(eventData, "killerId", 0));
+                                    }
+                                    if (eventData.containsKey("victimId")) {
+                                        event.setVictimId(getIntegerSafely(eventData, "victimId", 0));
+                                    }
+                                    if (eventData.containsKey("assistingParticipantIds")) {
+                                        @SuppressWarnings("unchecked")
+                                        List<Integer> assistingIds = (List<Integer>) eventData.get("assistingParticipantIds");
+                                        event.setAssistingParticipantIds(assistingIds);
+                                    }
+                                    if (eventData.containsKey("monsterType")) {
+                                        event.setMonsterType((String) eventData.get("monsterType"));
+                                    }
+                                    if (eventData.containsKey("buildingType")) {
+                                        event.setBuildingType((String) eventData.get("buildingType"));
+                                    }
+                                    if (eventData.containsKey("laneType")) {
+                                        event.setLaneType((String) eventData.get("laneType"));
+                                    }
+                                    if (eventData.containsKey("towerType")) {
+                                        event.setTowerType((String) eventData.get("towerType"));
+                                    }
+                                    if (eventData.containsKey("itemId")) {
+                                        event.setItemId(getIntegerSafely(eventData, "itemId", 0));
+                                    }
+
+                                    matchEventRepository.save(event);
+                                } catch (Exception e) {
+                                    logger.warn("MatchEvent 저장 실패: {}", e.getMessage());
+                                }
+                            }
+                        }
+                        
+                    } catch (Exception e) {
+                        logger.error("프레임 {} 처리 실패: {}", i + 1, e.getMessage(), e);
+                    }
+                }
+            } else {
+                logger.warn("frames 데이터가 null입니다");
+            }
+            
+            logger.info("=== 매치 데이터 DB 저장 완료: {} ===", matchId);
+
+        } catch (Exception e) {
+            logger.error("매치 데이터 DB 저장 실패: {}", matchId, e);
+            throw new RuntimeException("매치 데이터 저장 실패", e);
+        }
+    }
+
+    /**
+     * 안전한 Integer 변환 헬퍼 메서드
+     */
+    private Integer getIntegerSafely(Map<String, Object> data, String key, Integer defaultValue) {
+        try {
+            Object value = data.get(key);
+            if (value != null) {
+                if (value instanceof Integer) {
+                    return (Integer) value;
+                } else if (value instanceof Long) {
+                    return ((Long) value).intValue();
+                } else if (value instanceof String) {
+                    return Integer.parseInt((String) value);
+                } else {
+                    return defaultValue;
+                }
+            }
+            return defaultValue;
+        } catch (Exception e) {
+            logger.warn("{} 값을 Integer로 변환 실패: {}", key, e.getMessage());
+            return defaultValue;
+        }
+    }
 
     /**
      * 게임 분석 수행
@@ -373,7 +845,25 @@ public class MatchAnalysisService {
         String tagLine = extractTagLine(analysis);
         
         logger.info("AI 분석 대상: {}#{}, 매치: {}", gameName, tagLine, matchId);
-        
+
+        //Riot API 데이터를 먼저 DB에 저장
+        try{
+            //RiotService를 통해 매치 데이터 가져오기
+            MatchDetailDto matchDetailDto = riotService.getMatchDetail(matchId);
+            MatchTimelineDto matchTimelineDto = riotService.getMatchTimeline(matchId);
+
+            // DTO를 Map으로 변환
+            Map<String, Object> matchData = convertMatchDetailToMap(matchDetailDto);
+            Map<String, Object> timelineData = convertMatchTimelineToMap(matchTimelineDto);
+
+            // DB에 저장
+            saveMatchDataToDB(matchId, matchData, timelineData);
+
+        } catch (Exception e) {
+            logger.warn("매치 데이터 DB 저장 실패, AI 분석은 계속 진행: {}", e.getMessage());
+        }
+
+
         // GameAnalysisService를 통해 상세 분석 수행
         String aiAnalysisResult = gameAnalysisService.analyzePlayerMatch(gameName, tagLine, matchId);
         
