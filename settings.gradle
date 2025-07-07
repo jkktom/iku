@@ -1,0 +1,4 @@
+rootProject.name = 'iku'
+
+include 'backend'
+include 'frontend'
