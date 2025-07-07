@@ -8,6 +8,7 @@ import {
 import type { LinksFunction, LoaderFunction } from "@remix-run/node";
 import { ClerkApp } from "@clerk/remix";
 import { rootAuthLoader } from "@clerk/remix/ssr.server";
+import { SidebarLayout } from "~/components/sidebar-layout";
 
 import "./tailwind.css";
 
@@ -47,7 +48,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  return <Outlet />;
+  return (
+    <SidebarLayout>
+      <Outlet />
+    </SidebarLayout>
+  );
 }
 
 export default ClerkApp(App, {

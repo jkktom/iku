@@ -190,11 +190,14 @@ export default function AIAnalysis() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold">AI 게임 분석</h1>
-        <p className="text-gray-600 mt-2">리그 오브 레전드 게임 플레이를 AI로 분석해보세요</p>
-      </div>
+    <div className="h-full bg-gray-50">
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">AI 게임 분석</h1>
+          <p className="text-gray-600 mt-2">리그 오브 레전드 게임 플레이를 AI로 분석해보세요</p>
+        </div>
+        
+        <div className="space-y-6">
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -392,6 +395,8 @@ export default function AIAnalysis() {
           </CardContent>
         </Card>
       )}
+        </div>
+      </div>
     </div>
   );
 }
