@@ -3,6 +3,7 @@ package org.mtvs.backend.analysis.entity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.mtvs.backend.common.constants.AnalysisStatus;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -39,8 +40,7 @@ public class MatchAnalysis {
     private String analysisSummary;
     
     @Column(name = "analysis_status", length = 20)
-    @Enumerated(EnumType.STRING)
-    private AnalysisStatus analysisStatus;
+    private String analysisStatus;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -51,13 +51,6 @@ public class MatchAnalysis {
     @Column(name = "error_message", columnDefinition = "text")
     private String errorMessage;
 
-    // 분석 상태 열거형
-    public enum AnalysisStatus {
-        REQUESTED,    // 분석 요청됨
-        PROCESSING,   // 분석 중
-        COMPLETED,    // 분석 완료
-        FAILED        // 분석 실패
-    }
 
     // 기본 생성자
     public MatchAnalysis() {
@@ -140,11 +133,11 @@ public class MatchAnalysis {
         this.analysisSummary = analysisSummary;
     }
 
-    public AnalysisStatus getAnalysisStatus() {
+    public String getAnalysisStatus() {
         return analysisStatus;
     }
 
-    public void setAnalysisStatus(AnalysisStatus analysisStatus) {
+    public void setAnalysisStatus(String analysisStatus) {
         this.analysisStatus = analysisStatus;
         this.updatedAt = LocalDateTime.now();
     }

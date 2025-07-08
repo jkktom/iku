@@ -4,15 +4,28 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "participant_frames")
+@IdClass(ParticipantFrameId.class)
 public class ParticipantFrame {
+    
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "match_id")
+    private String matchId; // Part of composite key
+    
+    @Id
+    @Column(name = "timestamp")
+    private long timestamp; // Part of composite key - timeline timestamp
+    
+    @Id
+    @Column(name = "participant_id")
+    private byte participantId; // Part of composite key - participant ID (1-10, perfect for byte)
 
-    @ManyToOne(fetch = FetchType.LAZY) // MatchTimeline을 즉시 로딩할 필요가 없다면 LAZY로 설정
-    @JoinColumn(name = "timeline_id") // 외래 키 컬럼 이름
-    private MatchTimeline timeline; //
-    private int participantId; // 참여자 ID
+    // Relationship to MatchTimeline (not part of key but for navigation)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumns({
+        @JoinColumn(name = "match_id", referencedColumnName = "match_id", insertable = false, updatable = false),
+        @JoinColumn(name = "timestamp", referencedColumnName = "timestamp", insertable = false, updatable = false)
+    })
+    private MatchTimeline timeline;
     private int totalGold; // 총 골드
     private int level; // 레벨
     private int minionsKilled; // 미니언 킬 수
@@ -24,8 +37,10 @@ public class ParticipantFrame {
     public ParticipantFrame() {
     }
 
-    // 모든 필드를 포함하는 생성자 (선택 사항이지만 편리함)
-    public ParticipantFrame(int participantId, int totalGold, int level, int minionsKilled, int jungleMinionsKilled, int x, int y) {
+    // Constructor with composite key fields
+    public ParticipantFrame(String matchId, long timestamp, byte participantId, int totalGold, int level, int minionsKilled, int jungleMinionsKilled, int x, int y) {
+        this.matchId = matchId;
+        this.timestamp = timestamp;
         this.participantId = participantId;
         this.totalGold = totalGold;
         this.level = level;
@@ -36,15 +51,19 @@ public class ParticipantFrame {
     }
 
     // Getter 메소드들
-    public Long getId() {
-        return id;
+    public String getMatchId() {
+        return matchId;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
     }
 
     public MatchTimeline getTimeline() {
         return timeline;
     }
 
-    public int getParticipantId() {
+    public byte getParticipantId() {
         return participantId;
     }
 
@@ -73,15 +92,19 @@ public class ParticipantFrame {
     }
 
     // Setter 메소드들
-    public void setId(Long id) {
-        this.id = id;
+    public void setMatchId(String matchId) {
+        this.matchId = matchId;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 
     public void setTimeline(MatchTimeline timeline) {
         this.timeline = timeline;
     }
 
-    public void setParticipantId(int participantId) {
+    public void setParticipantId(byte participantId) {
         this.participantId = participantId;
     }
 

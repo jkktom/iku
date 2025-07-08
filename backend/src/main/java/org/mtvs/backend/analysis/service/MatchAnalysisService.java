@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mtvs.backend.gemini.service.GameAnalysisService;
 import org.mtvs.backend.gemini.service.GeminiService;
 import org.mtvs.backend.analysis.repository.MatchAnalysisRepository;
+import org.mtvs.backend.common.constants.AnalysisStatus;
 import org.mtvs.backend.riot.Repository.*;
 import org.mtvs.backend.riot.dto.AccountDto;
 import org.mtvs.backend.analysis.dto.AIAnalysisResponseDto;
@@ -12,6 +13,7 @@ import org.mtvs.backend.analysis.entity.MatchAnalysis;
 import org.mtvs.backend.riot.dto.MatchDetailDto;
 import org.mtvs.backend.riot.dto.MatchTimelineDto;
 import org.mtvs.backend.riot.entity.*;
+import org.mtvs.backend.common.constants.EventType;
 import org.mtvs.backend.riot.service.RiotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -217,7 +219,7 @@ public class MatchAnalysisService {
         MatchAnalysis analysis = new MatchAnalysis();
         analysis.setPuuid(account.getPuuid());
         analysis.setTargetPlayerName(account.getGameName());
-        analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
+        analysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
         // matchId는 의도적으로 null로 설정 (2단계에서 설정됨)
 
         //RiotUser 엔티티 저장
@@ -267,7 +269,7 @@ public class MatchAnalysisService {
             MatchAnalysis newRecord = new MatchAnalysis();
             newRecord.setPuuid(puuid);
             newRecord.setMatchId(matchId);
-            newRecord.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
+            newRecord.setAnalysisStatus(AnalysisStatus.REQUESTED);
             
             Map<String, Object> data = new HashMap<>();
             data.put("step", "MATCH_LOOKUP");
@@ -350,7 +352,7 @@ public class MatchAnalysisService {
         MatchAnalysis analysis = new MatchAnalysis();
         analysis.setPuuid(puuid);
         analysis.setTargetPlayerName(gameName);
-        analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
+        analysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
         // matchId는 null로 설정 (다중 매치이므로)
         
         // 요청 데이터 구성
@@ -368,7 +370,7 @@ public class MatchAnalysisService {
             logger.info("다중 분석 레코드 생성 완료: ID={}", analysis.getId());
             
             // 상태를 PROCESSING으로 변경
-            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.PROCESSING);
+            analysis.setAnalysisStatus(AnalysisStatus.PROCESSING);
             matchAnalysisRepository.save(analysis);
             
             // GameAnalysisService를 통한 다중 매치 분석
@@ -389,7 +391,7 @@ public class MatchAnalysisService {
             // 결과 저장
             analysis.setAiResponseData(responseData);
             analysis.setAnalysisSummary(aiAnalysisResult);
-            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.COMPLETED);
+            analysis.setAnalysisStatus(AnalysisStatus.COMPLETED);
             
             // 요청 데이터에 분석 완료 표시 추가
             requestData.put("multipleAnalysisCompleted", true);
@@ -401,7 +403,7 @@ public class MatchAnalysisService {
             
         } catch (Exception e) {
             logger.error("다중 매치 AI 분석 실패: ", e);
-            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.FAILED);
+            analysis.setAnalysisStatus(AnalysisStatus.FAILED);
             analysis.setErrorMessage("다중 매치 AI 분석 실패: " + e.getMessage());
             matchAnalysisRepository.save(analysis);
             throw new RuntimeException("다중 매치 AI 분석 실패", e);
@@ -430,7 +432,7 @@ public class MatchAnalysisService {
         Optional<MatchAnalysis> existingOpt = matchAnalysisRepository.findByPuuidAndMatchId(puuid, matchId);
         if (existingOpt.isPresent()) {
             MatchAnalysis existing = existingOpt.get();
-            if (existing.getAnalysisStatus() == MatchAnalysis.AnalysisStatus.COMPLETED) {
+            if (AnalysisStatus.COMPLETED.equals(existing.getAnalysisStatus())) {
                 logger.info("이미 완료된 분석이 존재함: ID={}", existing.getId());
                 return existing;
             }
@@ -441,7 +443,7 @@ public class MatchAnalysisService {
         
         try {
             // 상태를 PROCESSING으로 변경
-            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.PROCESSING);
+            analysis.setAnalysisStatus(AnalysisStatus.PROCESSING);
             matchAnalysisRepository.save(analysis);
             
             // AI 분석 수행
@@ -454,7 +456,7 @@ public class MatchAnalysisService {
             
         } catch (Exception e) {
             logger.error("AI 분석 실패: ", e);
-            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.FAILED);
+            analysis.setAnalysisStatus(AnalysisStatus.FAILED);
             analysis.setErrorMessage("AI 분석 실패: " + e.getMessage());
             matchAnalysisRepository.save(analysis);
             throw new RuntimeException("AI 분석 실패", e);
@@ -488,7 +490,7 @@ public class MatchAnalysisService {
         MatchAnalysis analysis = new MatchAnalysis();
         analysis.setPuuid(puuid);
         analysis.setMatchId(matchId);
-        analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
+        analysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
         
         Map<String, Object> data = new HashMap<>();
         data.put("step", "AI_ANALYSIS_DIRECT");
@@ -685,11 +687,17 @@ public class MatchAnalysisService {
                         MatchTimeline timeline = new MatchTimeline();
                         timeline.setMatch(match);
                         
+                        // Set composite key fields
+                        timeline.setMatchId(match.getMatchId());
+                        
                         Object timestampObj = frameData.get("timestamp");
+                        long timestamp;
                         if (timestampObj != null) {
-                            timeline.setTimestamp((Long) timestampObj);
+                            timestamp = (Long) timestampObj;
+                            timeline.setTimestamp(timestamp);
                         } else {
-                            timeline.setTimestamp(0L);
+                            timestamp = 0L;
+                            timeline.setTimestamp(timestamp);
                         }
 
                         timeline = matchTimelineRepository.save(timeline);
@@ -707,7 +715,11 @@ public class MatchAnalysisService {
 
                                     ParticipantFrame participantFrame = new ParticipantFrame();
                                     participantFrame.setTimeline(timeline);
-                                    participantFrame.setParticipantId(Integer.parseInt(entry.getKey()));
+                                    
+                                    // Set composite key fields
+                                    participantFrame.setMatchId(match.getMatchId());
+                                    participantFrame.setTimestamp(timestamp);
+                                    participantFrame.setParticipantId((byte) Integer.parseInt(entry.getKey()));
 
                                     // position 정보
                                     @SuppressWarnings("unchecked")
@@ -738,24 +750,33 @@ public class MatchAnalysisService {
                         List<Map<String, Object>> eventsData = (List<Map<String, Object>>) frameData.get("events");
 
                         if (eventsData != null) {
-                            for (Map<String, Object> eventData : eventsData) {
+                            for (int eventIndex = 0; eventIndex < eventsData.size(); eventIndex++) {
+                                Map<String, Object> eventData = eventsData.get(eventIndex);
                                 try {
                                     MatchEvent event = new MatchEvent();
                                     event.setTimeline(timeline);
                                     
+                                    // Set composite key fields
+                                    event.setMatchId(match.getMatchId());
+                                    event.setSequenceId((short) eventIndex);
+                                    
+                                    // Set event timestamp for composite key (use frame timestamp for consistency)
+                                    event.setTimestamp(timestamp);
+                                    
                                     Object typeObj = eventData.get("type");
                                     if (typeObj != null) {
-                                        event.setType((String) typeObj);
+                                        String eventTypeName = (String) typeObj;
+                                        try {
+                                            event.setEventTypeId(EventType.getEventTypeId(eventTypeName));
+                                        } catch (IllegalArgumentException e) {
+                                            // Unknown event type, use a default or skip
+                                            event.setEventTypeId((byte) 0); // 0 for unknown
+                                        }
                                     } else {
-                                        event.setType("UNKNOWN");
+                                        event.setEventTypeId((byte) 0); // 0 for unknown
                                     }
                                     
-                                    Object eventTimestampObj = eventData.get("timestamp");
-                                    if (eventTimestampObj != null) {
-                                        event.setTimestamp((Long) eventTimestampObj);
-                                    } else {
-                                        event.setTimestamp(0L);
-                                    }
+                                    // Note: Event timestamp already set above for composite key consistency
                                     
                                     event.setParticipantId(getIntegerSafely(eventData, "participantId", 0));
 
@@ -771,18 +792,8 @@ public class MatchAnalysisService {
                                         List<Integer> assistingIds = (List<Integer>) eventData.get("assistingParticipantIds");
                                         event.setAssistingParticipantIds(assistingIds);
                                     }
-                                    if (eventData.containsKey("monsterType")) {
-                                        event.setMonsterType((String) eventData.get("monsterType"));
-                                    }
-                                    if (eventData.containsKey("buildingType")) {
-                                        event.setBuildingType((String) eventData.get("buildingType"));
-                                    }
-                                    if (eventData.containsKey("laneType")) {
-                                        event.setLaneType((String) eventData.get("laneType"));
-                                    }
-                                    if (eventData.containsKey("towerType")) {
-                                        event.setTowerType((String) eventData.get("towerType"));
-                                    }
+                                    // Note: monsterType, buildingType, laneType, towerType fields removed
+                                    // These were not essential for our analysis context
                                     if (eventData.containsKey("itemId")) {
                                         event.setItemId(getIntegerSafely(eventData, "itemId", 0));
                                     }
@@ -887,7 +898,7 @@ public class MatchAnalysisService {
         // 결과 저장
         analysis.setAiResponseData(responseData);
         analysis.setAnalysisSummary(aiAnalysisResult);
-        analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.COMPLETED);
+        analysis.setAnalysisStatus(AnalysisStatus.COMPLETED);
         
         // 요청 데이터에 분석 완료 표시 추가
         Map<String, Object> requestData = analysis.getAiRequestData();
@@ -991,7 +1002,7 @@ public class MatchAnalysisService {
     }
 
     @Transactional(readOnly = true)
-    public List<MatchAnalysis> getAnalysisByStatus(MatchAnalysis.AnalysisStatus status) {
+    public List<MatchAnalysis> getAnalysisByStatus(String status) {
         return matchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status);
     }
 

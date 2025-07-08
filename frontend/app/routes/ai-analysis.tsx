@@ -53,6 +53,7 @@ export default function AIAnalysis() {
   const [tagLine, setTagLine] = useState("");
   const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
   const [isLoadingAccount, setIsLoadingAccount] = useState(false);
+  const [analysisId, setAnalysisId] = useState<number | null>(null);
   
   // Step 2: Get Match ID
   const [matchInfo, setMatchInfo] = useState<MatchInfo | null>(null);
@@ -85,14 +86,14 @@ export default function AIAnalysis() {
       if (accountResponse.account) {
         setAccountInfo(accountResponse.account);
         
-        // 2. Analysis API로 초기 레코드 생성
-        await apiFetch(`http://localhost:8080/api/analysis/init`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(accountResponse.account)
+        // 2. Single Match Analysis API로 초기 레코드 생성
+        const createResponse = await apiFetch(`http://localhost:8080/api/singleanalysis/create/${accountResponse.account.puuid}`, {
+          method: 'POST'
         });
+        
+        if (createResponse.analysisId) {
+          setAnalysisId(createResponse.analysisId);
+        }
         
         setMatchInfo(null);
         setAnalysisResult(null);
@@ -118,10 +119,12 @@ export default function AIAnalysis() {
       const matchResponse = await apiFetch(`http://localhost:8080/api/riot/matches/${accountInfo.puuid}`);
       
       if (matchResponse.selectedMatchId) {
-        // 2. Analysis API로 매치 ID 업데이트
-        await apiFetch(`http://localhost:8080/api/analysis/match/${accountInfo.puuid}/${matchResponse.selectedMatchId}`, {
-          method: 'PUT'
-        });
+        // 2. Single Match Analysis API로 매치 ID 업데이트
+        if (analysisId) {
+          await apiFetch(`http://localhost:8080/api/singleanalysis/match/${analysisId}?matchId=${matchResponse.selectedMatchId}`, {
+            method: 'PUT'
+          });
+        }
         
         setMatchInfo({
           matchIds: matchResponse.matchIds,
@@ -147,7 +150,7 @@ export default function AIAnalysis() {
 
     try {
       const response = await apiFetch(
-        `http://localhost:8080/api/analysis/analyze/${accountInfo.puuid}/${matchInfo.selectedMatchId}`,
+        `http://localhost:8080/api/singleanalysis/analyze/${accountInfo.puuid}/${matchInfo.selectedMatchId}`,
         { method: 'POST' }
       );
       
@@ -175,7 +178,7 @@ export default function AIAnalysis() {
 
     try {
       const response = await apiFetch(
-        `http://localhost:8080/api/analysis/analyze-multiple/${accountInfo.puuid}?matchCount=${matchCount}`,
+        `http://localhost:8080/api/multianalysis/analyze/${accountInfo.puuid}?matchCount=${matchCount}`,
         { method: 'POST' }
       );
       
@@ -193,7 +196,7 @@ export default function AIAnalysis() {
     <div className="h-full bg-gray-50">
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">AI 게임 분석</h1>
+          <h1 className="text-2xl font-bold text-gray-900">새로운 분석 요청하기</h1>
           <p className="text-gray-600 mt-2">리그 오브 레전드 게임 플레이를 AI로 분석해보세요</p>
         </div>
         

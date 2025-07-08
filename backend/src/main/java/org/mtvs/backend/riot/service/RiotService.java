@@ -1,5 +1,6 @@
 package org.mtvs.backend.riot.service;
 
+import org.mtvs.backend.common.service.RiotApiService;
 import org.mtvs.backend.riot.dto.AccountDto;
 import org.mtvs.backend.riot.dto.MatchDetailDto;
 import org.mtvs.backend.riot.dto.MatchTimelineDto;
@@ -18,7 +19,7 @@ import java.util.Map;
 
 /* 게임 매치 관련 */
 @Service
-public class RiotService {
+public class RiotService implements RiotApiService {
     private final RestTemplate restTemplate;
 
     @Value("${riot.api.key}")

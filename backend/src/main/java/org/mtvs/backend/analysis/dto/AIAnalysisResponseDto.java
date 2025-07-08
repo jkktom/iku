@@ -20,7 +20,7 @@ public class AIAnalysisResponseDto {
     
     // AI 응답의 주요 부분들
     private PerformanceAnalysis performanceAnalysis;
-    private List<PlayPhaseAnalysis> phaseAnalyses;
+    private List<PlayPhaseAnalysis> phaseanalysis;
     private List<ImprovementSuggestion> improvements;
     private OverallRating overallRating;
     private String errorMessage;
@@ -156,8 +156,8 @@ public class AIAnalysisResponseDto {
     public PerformanceAnalysis getPerformanceAnalysis() { return performanceAnalysis; }
     public void setPerformanceAnalysis(PerformanceAnalysis performanceAnalysis) { this.performanceAnalysis = performanceAnalysis; }
 
-    public List<PlayPhaseAnalysis> getPhaseAnalyses() { return phaseAnalyses; }
-    public void setPhaseAnalyses(List<PlayPhaseAnalysis> phaseAnalyses) { this.phaseAnalyses = phaseAnalyses; }
+    public List<PlayPhaseAnalysis> getPhaseanalysis() { return phaseanalysis; }
+    public void setPhaseanalysis(List<PlayPhaseAnalysis> phaseanalysis) { this.phaseanalysis = phaseanalysis; }
 
     public List<ImprovementSuggestion> getImprovements() { return improvements; }
     public void setImprovements(List<ImprovementSuggestion> improvements) { this.improvements = improvements; }

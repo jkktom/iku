@@ -8,7 +8,11 @@ import {
   Menu,
   X,
   Plus,
-  History
+  History,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  BarChart3
 } from 'lucide-react'
 
 interface SidebarLayoutProps {
@@ -17,13 +21,21 @@ interface SidebarLayoutProps {
 
 export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [manualHistoryExpanded, setManualHistoryExpanded] = useState(false)
   const location = useLocation()
   const { isSignedIn } = useAuth()
+  
+  // Auto-expand history section if user is on history pages or manually expanded
+  const historyExpanded = location.pathname.includes('history') || manualHistoryExpanded
 
   const navigation = [
     { name: '공지사항', href: '/', icon: Megaphone },
-    { name: 'AI 분석', href: '/ai-analysis', icon: Sparkles },
-    { name: '분석 기록', href: '/match-history', icon: History },
+    { name: '새로운 분석 요청하기', href: '/ai-analysis', icon: Sparkles },
+  ]
+  
+  const historyNavigation = [
+    { name: '단일 경기 분석 결과', href: '/single-match-history', icon: FileText },
+    { name: '다수 경기 분석 결과', href: '/multi-match-history', icon: BarChart3 },
   ]
 
   const isActive = (href: string) => {
@@ -83,6 +95,49 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                 </Link>
               )
             })}
+            
+            {/* 분석 기록 섹션 - 확장 가능한 메뉴 */}
+            <div className="space-y-1">
+              <button
+                onClick={() => setManualHistoryExpanded(!manualHistoryExpanded)}
+                className={`w-full flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  historyExpanded ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <History className="h-5 w-5 mr-3 flex-shrink-0" />
+                <span className="flex-1 text-left">분석 기록</span>
+                {historyExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              
+              {historyExpanded && (
+                <div className="ml-6 space-y-1">
+                  {historyNavigation.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`
+                          flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
+                          ${isActive(item.href) 
+                            ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' 
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                          }
+                        `}
+                      >
+                        <Icon className="h-4 w-4 mr-3 flex-shrink-0" />
+                        {item.name}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </nav>
         </div>
       </div>

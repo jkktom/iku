@@ -1,22 +1,25 @@
 package org.mtvs.backend.riot.entity;
 
-import com.fasterxml.jackson.databind.deser.DataFormatReaders;
 import jakarta.persistence.*;
 import java.util.List;
 
 @Entity
-
 @Table(name = "match_timelines")
+@IdClass(MatchTimelineId.class)
 public class MatchTimeline {
+    
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; //타임라인 고유 ID
+    @Column(name = "match_id")
+    private String matchId; // Part of composite key - matches Match.matchId
 
-    @ManyToOne
-    @JoinColumn(name = "match_id")
-    private Match match; // 게임 Id
+    @Id
+    @Column(name = "timestamp")
+    private long timestamp; // Part of composite key - timeline timestamp in milliseconds
 
-    private long timestamp; //타임라인 시간
+    // Relationship to Match entity (not part of key but for navigation)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "match_id", insertable = false, updatable = false)
+    private Match match;
 
     @OneToMany(mappedBy = "timeline", cascade = CascadeType.ALL)
     private List<ParticipantFrame> participantFrames;
@@ -27,20 +30,20 @@ public class MatchTimeline {
     public MatchTimeline() {
     }
 
-    public MatchTimeline(Long id, Match match, long timestamp, List<ParticipantFrame> participantFrames, List<MatchEvent> events) {
-        this.id = id;
-        this.match = match;
+    public MatchTimeline(String matchId, long timestamp, Match match, List<ParticipantFrame> participantFrames, List<MatchEvent> events) {
+        this.matchId = matchId;
         this.timestamp = timestamp;
+        this.match = match;
         this.participantFrames = participantFrames;
         this.events = events;
     }
 
-    public Long getId() {
-        return id;
+    public String getMatchId() {
+        return matchId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setMatchId(String matchId) {
+        this.matchId = matchId;
     }
 
     public Match getMatch() {

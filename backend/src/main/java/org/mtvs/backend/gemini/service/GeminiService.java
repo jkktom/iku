@@ -1,5 +1,6 @@
 package org.mtvs.backend.gemini.service;
 
+import org.mtvs.backend.common.service.AiAnalysisService;
 import org.mtvs.backend.gemini.dto.Request;
 import org.mtvs.backend.gemini.dto.Response;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,7 +12,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
-public class GeminiService {
+public class GeminiService implements AiAnalysisService {
 
     private final RestTemplate restTemplate;
     
@@ -128,5 +129,20 @@ public class GeminiService {
             
             return "오류가 발생했습니다: " + e.getMessage();
         }
+    }
+    
+    @Override
+    public String analyzeContent(String analysisPrompt) {
+        return sendMessage(analysisPrompt);
+    }
+    
+    @Override
+    public String analyzeMatchData(String matchDataPrompt) {
+        return sendMessage(matchDataPrompt);
+    }
+    
+    @Override
+    public String analyzePlayerPerformance(String performancePrompt) {
+        return sendMessage(performancePrompt);
     }
 }

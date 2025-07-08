@@ -28,11 +28,11 @@ public interface MatchAnalysisRepository extends JpaRepository<MatchAnalysis, Lo
     List<MatchAnalysis> findByPuuidAndMatchIdIsNotNullOrderByCreatedAtDesc(String puuid);
     
     // 분석 상태별 조회
-    List<MatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(MatchAnalysis.AnalysisStatus status);
+    List<MatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(String status);
     
     // 특정 유저의 특정 상태 분석들 조회
     List<MatchAnalysis> findByPuuidAndAnalysisStatusOrderByCreatedAtDesc(
-        String puuid, MatchAnalysis.AnalysisStatus status);
+        String puuid, String status);
     
     // 특정 챔피언의 분석 결과 조회
     List<MatchAnalysis> findByTargetChampionOrderByCreatedAtDesc(String championName);

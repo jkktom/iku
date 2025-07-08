@@ -9,12 +9,14 @@ import java.util.List;
 @Table(name = "matches")
 public class Match {
     @Id
-    private String matchId; //게임 고유 ID
+    @Column(name = "match_id")
+    private String matchId; //게임 고유 ID (Riot's original match ID)
 
     private long gameDuration; //게임 지속 시간 (초)
     private String gameMode; //게임 모드
     private String gameVersion; //게임 버전
     private int queueId; //게임 타입 큐 ID
+    private LocalDateTime gameStartTime; //게임 시작 시간 (restored field)
 
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Participant> participants;
@@ -25,12 +27,13 @@ public class Match {
     public Match() {
     }
 
-    public Match(String matchId, long gameDuration, String gameMode, String gameVersion, int queueId, List<Participant> participants, List<MatchTimeline> matchTimelines) {
+    public Match(String matchId, long gameDuration, String gameMode, String gameVersion, int queueId, LocalDateTime gameStartTime, List<Participant> participants, List<MatchTimeline> matchTimelines) {
         this.matchId = matchId;
         this.gameDuration = gameDuration;
         this.gameMode = gameMode;
         this.gameVersion = gameVersion;
         this.queueId = queueId;
+        this.gameStartTime = gameStartTime;
         this.participants = participants;
         this.matchTimelines = matchTimelines;
     }
@@ -75,6 +78,13 @@ public class Match {
         this.queueId = queueId;
     }
 
+    public LocalDateTime getGameStartTime() {
+        return gameStartTime;
+    }
+
+    public void setGameStartTime(LocalDateTime gameStartTime) {
+        this.gameStartTime = gameStartTime;
+    }
 
     public List<Participant> getParticipants() {
         return participants;
