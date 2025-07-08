@@ -11,7 +11,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@clerk/backend": "^2.2.0",
+    "@clerk/backend": "^2.4.0",
     "@radix-ui/react-checkbox": "^1.3.2",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
@@ -29,7 +29,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@clerk/remix": "^4.8.2",
+    "@clerk/remix": "^4.8.5",
     "@remix-run/dev": "^2.16.8",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
