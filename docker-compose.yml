@@ -1,15 +1,122 @@
+version: '3.8'
+
 services:
-  db:
+  # Main 브랜치 서비스들
+  db-main:
     image: postgres:16
-    container_name: iku-ai-db
+    container_name: iku-main-db
     environment:
-      POSTGRES_DB: iku-ai-db
+      POSTGRES_DB: iku-main-db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: 5656
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata-main:/var/lib/postgresql/data
+    networks:
+      - iku-main-network
+
+  backend-main:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: iku-main-backend
+    environment:
+      - SPRING_PROFILES_ACTIVE=main
+      - DB_URL=jdbc:postgresql://db-main:5432/iku-main-db
+      - DB_USERNAME=user
+      - DB_PASSWORD=5656
+      - SERVER_PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db-main
+    volumes:
+      - ./backend:/app
+      - /app/.gradle
+      - /app/build
+    networks:
+      - iku-main-network
+
+  frontend-main:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: iku-main-frontend
+    environment:
+      - NODE_ENV=production
+      - VITE_API_BASE_URL=http://backend-main:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend-main
+    networks:
+      - iku-main-network
+
+  # Dev 브랜치 서비스들
+  db-dev:
+    image: postgres:16
+    container_name: iku-dev-db
+    environment:
+      POSTGRES_DB: iku-dev-db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: 5656
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+    networks:
+      - iku-dev-network
+
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: iku-dev-backend
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - DB_URL=jdbc:postgresql://db-dev:5432/iku-dev-db
+      - DB_USERNAME=user
+      - DB_PASSWORD=5656
+      - SERVER_PORT=8080
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db-dev
+    volumes:
+      - ./backend:/app
+      - /app/.gradle
+      - /app/build
+    networks:
+      - iku-dev-network
+
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: iku-dev-frontend
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://backend-dev:8080
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend-dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - iku-dev-network
 
 volumes:
-  pgdata:
+  pgdata-main:
+    driver: local
+  pgdata-dev:
+    driver: local
+
+networks:
+  iku-main-network:
+    driver: bridge
+  iku-dev-network:
+    driver: bridge
+  EOF

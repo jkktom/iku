@@ -996,6 +996,12 @@ public class MatchAnalysisService {
     }
 
     @Transactional(readOnly = true)
+    public List<MatchAnalysis> getAnalysisByStatusWithPaging(MatchAnalysis.AnalysisStatus status, int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return matchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status, pageable);
+    }
+
+    @Transactional(readOnly = true)
     public List<MatchAnalysis> getAnalysisByMatchId(String matchId) {
         return matchAnalysisRepository.findByMatchIdOrderByCreatedAtDesc(matchId);
     }
@@ -1008,6 +1014,16 @@ public class MatchAnalysisService {
     @Transactional(readOnly = true)
     public List<MatchAnalysis> getFailedAnalysis() {
         return matchAnalysisRepository.findFailedAnalysis();
+    }
+
+    @Transactional(readOnly = true)
+    public long getTotalCount() {
+        return matchAnalysisRepository.count();
+    }
+
+    @Transactional(readOnly = true)
+    public long getCompletedCount() {
+        return matchAnalysisRepository.countByAnalysisStatus(MatchAnalysis.AnalysisStatus.COMPLETED);
     }
 
     /**

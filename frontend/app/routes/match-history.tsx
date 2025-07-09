@@ -37,9 +37,8 @@ export default function MatchHistory() {
     setIsLoading(true);
     setError(null);
     try {
-      // Get all completed analyses - this endpoint might need to be created
-      // For now, we'll try to get analyses by status
-      const response = await apiFetch('/api/analysis/status/COMPLETED');
+      // Get first 20 completed analyses with pagination
+      const response = await apiFetch('/api/analysis/status/COMPLETED?page=0&size=20');
       setAnalyses(response);
       setFilteredAnalyses(response);
     } catch (err) {
