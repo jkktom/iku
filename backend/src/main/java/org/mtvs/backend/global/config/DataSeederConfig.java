@@ -41,6 +41,7 @@ public class DataSeederConfig {
             // Seed Event Types
             if (eventTypeRepository.count() == 0) {
                 eventTypeRepository.saveAll(List.of(
+                        new EventType((byte) 0, "UNKNOWN", "Unknown Event"),
                         new EventType((byte) 1, "CHAMPION_KILL", "Champion Kill"),
                         new EventType((byte) 2, "CHAMPION_SPECIAL_KILL", "Champion Special Kill"),
                         new EventType((byte) 3, "GAME_END", "Game End"),

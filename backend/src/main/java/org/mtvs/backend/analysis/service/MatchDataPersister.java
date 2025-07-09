@@ -178,15 +178,10 @@ public class MatchDataPersister {
         event.setTimestamp(timeline.getTimestamp()); // Use timeline timestamp for consistency
         event.setSequenceId(sequenceId);
         // Convert event type string to byte ID
-        try {
-            event.setEventTypeId(EventType.getEventTypeId(eventDto.getType()));
-        } catch (IllegalArgumentException e) {
-            // Unknown event type, use 0 for unknown
-            event.setEventTypeId((byte) 0);
-        }
-        event.setParticipantId(eventDto.getParticipantId());
-        event.setKillerId(eventDto.getKillerId());
-        event.setVictimId(eventDto.getVictimId());
+        event.setEventTypeId(EventType.getEventTypeId(eventDto.getType()));
+        event.setParticipantId(eventDto.getParticipantId() != null ? eventDto.getParticipantId() : 0);
+        event.setKillerId(eventDto.getKillerId() != null ? eventDto.getKillerId() : 0);
+        event.setVictimId(eventDto.getVictimId() != null ? eventDto.getVictimId() : 0);
         
         if (eventDto.getAssistingParticipantIds() != null) {
             event.setAssistingParticipantIds(eventDto.getAssistingParticipantIds());
@@ -198,7 +193,7 @@ public class MatchDataPersister {
         //     event.setPositionY(eventDto.getPosition().getY());
         // }
         
-        event.setItemId(eventDto.getItemId());
+        event.setItemId(eventDto.getItemId() != null ? eventDto.getItemId() : 0);
         // Note: MatchEvent entity doesn't have these fields
         // event.setSkillSlot(eventDto.getSkillSlot());
         // event.setLevelUpType(eventDto.getLevelUpType());

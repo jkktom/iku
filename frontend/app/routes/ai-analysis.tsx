@@ -18,31 +18,32 @@ interface MatchInfo {
 }
 
 interface AnalysisResult {
-  analysisRecord: {
-    id: number;
-    puuid: string;
-    matchId: string;
-    targetPlayerName: string;
-    status: string;
-    analysisSummary: string;
-    updatedAt: string;
-    aiResponseData: any;
-  };
-  message: string;
+  analysisId: number;
+  puuid: string;
+  matchId: string;
+  targetPlayerName: string;
+  analysisStatus: string;
+  analysisSummary: string;
+  updatedAt: string;
+  performanceAnalysis: any;
+  phaseanalysis: any;
+  improvements: any;
+  overallRating: any;
+  errorMessage: string;
 }
 
 interface MultipleAnalysisResult {
-  analysisRecord: {
-    id: number;
-    puuid: string;
-    matchId: string | null;  // 다중 매치 분석에서는 null
-    targetPlayerName: string;
-    status: string;
-    analysisSummary: string;
-    updatedAt: string;
-    aiResponseData: any;
-  };
-  message: string;
+  id: number;
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+  matchCount: number;
+  status: string;
+  analysisSummary: string;
+  aiResponseData: any;
+  createdAt: string;
+  updatedAt: string;
+  errorMessage: string;
 }
 
 export default function AIAnalysis() {
@@ -298,27 +299,31 @@ export default function AIAnalysis() {
               <div className="bg-purple-50 border border-purple-200 p-4 rounded">
                 <h3 className="font-bold text-lg mb-2">단일 게임 분석 결과</h3>
                 <div className="space-y-2">
-                  <p><strong>플레이어:</strong> {analysisResult.analysisRecord.targetPlayerName}</p>
-                  <p><strong>상태:</strong> {analysisResult.analysisRecord.status}</p>
-                  <p><strong>AI 응답 시간:</strong> {new Date(analysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
+                  <p><strong>플레이어:</strong> {analysisResult.targetPlayerName || 'Unknown'}</p>
+                  <p><strong>상태:</strong> {analysisResult.analysisStatus || 'Unknown'}</p>
+                  <p><strong>AI 응답 시간:</strong> {analysisResult.updatedAt ? new Date(analysisResult.updatedAt).toLocaleString('ko-KR') : 'N/A'}</p>
                   <div className="mt-4">
                     <strong>분석 요약:</strong>
                     <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
                       <div className="prose prose-sm max-w-none">
                         <ReactMarkdown>
-                          {analysisResult.analysisRecord.aiResponseData?.analysisResult || 
-                           analysisResult.analysisRecord.analysisSummary}
+                          {analysisResult.analysisSummary || 'No analysis summary available'}
                         </ReactMarkdown>
                       </div>
                     </div>
                   </div>
                   
-                  {analysisResult.analysisRecord.aiResponseData && (
+                  {analysisResult.performanceAnalysis && (
                     <div className="mt-4">
                       <strong>AI 응답 데이터:</strong>
                       <div className="bg-gray-50 p-3 rounded border mt-2 min-h-32 max-h-none">
                         <pre className="whitespace-pre-wrap text-xs break-words leading-relaxed overflow-x-auto">
-                          {JSON.stringify(analysisResult.analysisRecord.aiResponseData, null, 2)}
+                          {JSON.stringify({
+                            performanceAnalysis: analysisResult.performanceAnalysis,
+                            phaseanalysis: analysisResult.phaseanalysis,
+                            improvements: analysisResult.improvements,
+                            overallRating: analysisResult.overallRating
+                          }, null, 2)}
                         </pre>
                       </div>
                     </div>
@@ -366,28 +371,27 @@ export default function AIAnalysis() {
               <div className="bg-green-50 border border-green-200 p-4 rounded">
                 <h3 className="font-bold text-lg mb-2">종합 분석 결과</h3>
                 <div className="space-y-2">
-                  <p><strong>플레이어:</strong> {multipleAnalysisResult.analysisRecord.targetPlayerName}</p>
-                  <p><strong>상태:</strong> {multipleAnalysisResult.analysisRecord.status}</p>
-                  <p><strong>분석 완료 시간:</strong> {new Date(multipleAnalysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
-                  <p><strong>메시지:</strong> {multipleAnalysisResult.message}</p>
+                  <p><strong>플레이어:</strong> {multipleAnalysisResult.gameName}#{multipleAnalysisResult.tagLine}</p>
+                  <p><strong>상태:</strong> {multipleAnalysisResult.status || 'Unknown'}</p>
+                  <p><strong>분석 완료 시간:</strong> {multipleAnalysisResult.updatedAt ? new Date(multipleAnalysisResult.updatedAt).toLocaleString('ko-KR') : 'N/A'}</p>
+                  <p><strong>분석 게임 수:</strong> {multipleAnalysisResult.matchCount || 0}개</p>
                   <div className="mt-4">
                     <strong>종합 분석 요약:</strong>
                     <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
                       <div className="prose prose-sm max-w-none">
                         <ReactMarkdown>
-                          {multipleAnalysisResult.analysisRecord.aiResponseData?.analysisResult || 
-                           multipleAnalysisResult.analysisRecord.analysisSummary}
+                          {multipleAnalysisResult.analysisSummary || 'No analysis summary available'}
                         </ReactMarkdown>
                       </div>
                     </div>
                   </div>
                   
-                  {multipleAnalysisResult.analysisRecord.aiResponseData && (
+                  {multipleAnalysisResult.aiResponseData && (
                     <div className="mt-4">
                       <strong>상세 분석 데이터:</strong>
                       <div className="bg-gray-50 p-3 rounded border mt-2 max-h-60 overflow-y-auto">
                         <pre className="whitespace-pre-wrap text-xs break-words leading-relaxed">
-                          {JSON.stringify(multipleAnalysisResult.analysisRecord.aiResponseData, null, 2)}
+                          {JSON.stringify(multipleAnalysisResult.aiResponseData, null, 2)}
                         </pre>
                       </div>
                     </div>

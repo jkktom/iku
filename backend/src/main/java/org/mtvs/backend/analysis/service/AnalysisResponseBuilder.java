@@ -27,6 +27,8 @@ public class AnalysisResponseBuilder {
             response.setAnalysisId(analysis.getId());
             response.setPuuid(analysis.getPuuid());
             response.setMatchId(analysis.getMatchId());
+            response.setTargetPlayerName(analysis.getTargetPlayerName());
+            response.setTargetChampion(analysis.getTargetChampion());
             response.setAnalysisStatus(analysis.getAnalysisStatus());
             response.setAnalysisSummary(analysis.getAnalysisSummary());
             response.setErrorMessage(analysis.getErrorMessage());

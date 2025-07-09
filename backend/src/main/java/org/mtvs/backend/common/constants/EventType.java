@@ -6,7 +6,8 @@ package org.mtvs.backend.common.constants;
  */
 public final class EventType {
     
-    // Event Type Constants (byte values 1-12)
+    // Event Type Constants (byte values 0-12)
+    public static final byte UNKNOWN = 0;
     public static final byte CHAMPION_KILL = 1;
     public static final byte CHAMPION_SPECIAL_KILL = 2;
     public static final byte GAME_END = 3;
@@ -32,6 +33,7 @@ public final class EventType {
      */
     public static String getEventTypeName(byte eventTypeId) {
         switch(eventTypeId) {
+            case UNKNOWN: return "UNKNOWN";
             case CHAMPION_KILL: return "CHAMPION_KILL";
             case CHAMPION_SPECIAL_KILL: return "CHAMPION_SPECIAL_KILL";
             case GAME_END: return "GAME_END";
@@ -60,6 +62,7 @@ public final class EventType {
         }
         
         switch(eventTypeName.toUpperCase()) {
+            case "UNKNOWN": return UNKNOWN;
             case "CHAMPION_KILL": return CHAMPION_KILL;
             case "CHAMPION_SPECIAL_KILL": return CHAMPION_SPECIAL_KILL;
             case "GAME_END": return GAME_END;
@@ -72,7 +75,7 @@ public final class EventType {
             case "SKILL_LEVEL_UP": return SKILL_LEVEL_UP;
             case "WARD_KILL": return WARD_KILL;
             case "WARD_PLACED": return WARD_PLACED;
-            default: throw new IllegalArgumentException("Unknown event type: " + eventTypeName);
+            default: return UNKNOWN;
         }
     }
     
@@ -82,7 +85,7 @@ public final class EventType {
      * @return true if valid, false otherwise
      */
     public static boolean isValidEventType(byte eventTypeId) {
-        return eventTypeId >= CHAMPION_KILL && eventTypeId <= WARD_PLACED;
+        return eventTypeId >= UNKNOWN && eventTypeId <= WARD_PLACED;
     }
     
     /**
@@ -91,7 +94,7 @@ public final class EventType {
      */
     public static byte[] getAllEventTypes() {
         return new byte[]{
-            CHAMPION_KILL, CHAMPION_SPECIAL_KILL, GAME_END, ITEM_DESTROYED,
+            UNKNOWN, CHAMPION_KILL, CHAMPION_SPECIAL_KILL, GAME_END, ITEM_DESTROYED,
             ITEM_PURCHASED, ITEM_SOLD, ITEM_UNDO, LEVEL_UP,
             PAUSE_END, SKILL_LEVEL_UP, WARD_KILL, WARD_PLACED
         };
@@ -103,7 +106,7 @@ public final class EventType {
      */
     public static String[] getAllEventTypeNames() {
         return new String[]{
-            "CHAMPION_KILL", "CHAMPION_SPECIAL_KILL", "GAME_END", "ITEM_DESTROYED",
+            "UNKNOWN", "CHAMPION_KILL", "CHAMPION_SPECIAL_KILL", "GAME_END", "ITEM_DESTROYED",
             "ITEM_PURCHASED", "ITEM_SOLD", "ITEM_UNDO", "LEVEL_UP",
             "PAUSE_END", "SKILL_LEVEL_UP", "WARD_KILL", "WARD_PLACED"
         };
