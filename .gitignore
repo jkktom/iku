@@ -27,6 +27,10 @@ Thumbs.db
 
 # Environment files
 .env.local
+.env
+
+# SSL certificates (나중에 nginx 사용시)
+nginx/ssl/
 
 # Logs
 logs/
@@ -47,13 +51,10 @@ dist/
 .roo
 cursor_resource/
 CLAUDE.md
-.env.example
 
 # Added by Task Master AI
 dev-debug.log
 # Dependency directories
-# Environment variables
-.env
 # Editor directories and files
 .idea/
 .vscode

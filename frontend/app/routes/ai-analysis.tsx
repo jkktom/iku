@@ -48,7 +48,7 @@ interface MultipleAnalysisResult {
 export default function AIAnalysis() {
   const apiFetch = useApi();
   const API_BASE_URL = typeof window !== 'undefined' 
-    ? window.ENV?.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL || process.env.VITE_DEFAULT_API_URL || 'http://localhost:8081'
+    ? (window as any).ENV?.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL || process.env.VITE_DEFAULT_API_URL || 'http://localhost:8081'
     : process.env.VITE_API_BASE_URL || process.env.VITE_DEFAULT_API_URL || 'http://localhost:8081';
   
   // Step 1: Get PUUID
