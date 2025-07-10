@@ -6,6 +6,12 @@ import { Label } from "~/components/ui/label";
 import { useApi } from "~/utils/api";
 import ReactMarkdown from "react-markdown";
 
+
+interface AIResponseData {
+  analysisResult?: string;
+  [key: string]: unknown;
+}
+
 interface AccountInfo {
   puuid: string;
   gameName: string;
@@ -29,7 +35,7 @@ interface SingleAnalysisResult {
     status: string;
     analysisSummary: string;
     updatedAt: string;
-    aiResponseData: any;
+    aiResponseData: AIResponseData;
   };
   message: string;
 }
@@ -47,16 +53,13 @@ interface MultipleAnalysisResult {
     status: string;
     analysisSummary: string;
     updatedAt: string;
-    aiResponseData: any;
+    aiResponseData: AIResponseData;
   };
   message: string;
 }
 
 export default function AIAnalysis() {
   const apiFetch = useApi();
-  const API_BASE_URL = typeof window !== 'undefined' 
-    ? (window as any).ENV?.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL || process.env.VITE_DEFAULT_API_URL || 'http://localhost:8081'
-    : process.env.VITE_API_BASE_URL || process.env.VITE_DEFAULT_API_URL || 'http://localhost:8081';
   
   // Step 1: Get PUUID
   const [playerName, setPlayerName] = useState("");
@@ -90,13 +93,13 @@ export default function AIAnalysis() {
     
     try {
       // 1. Riot API로 계정 정보 조회
-      const accountResponse = await apiFetch(`${API_BASE_URL}/api/riot/account/${playerName}/${tagLine}`);
+      const accountResponse = await apiFetch(`/api/riot/account/${playerName}/${tagLine}`);
       
       if (accountResponse.account) {
         setAccountInfo(accountResponse.account);
         
         // 2. Analysis API로 초기 레코드 생성
-        await apiFetch(`${API_BASE_URL}/api/analysis/init`, {
+        await apiFetch(`/api/analysis/init`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -128,7 +131,7 @@ export default function AIAnalysis() {
 
     try {
       // 1. Riot API로 매치 ID 조회
-      const matchResponse = await apiFetch(`${API_BASE_URL}/api/riot/matches/${accountInfo.puuid}`);
+      const matchResponse = await apiFetch(`/api/riot/matches/${accountInfo.puuid}`);
       
       if (matchResponse.selectedMatchId) {
         // 2. Analysis API로 매치 ID 업데이트 (단일 분석용)
