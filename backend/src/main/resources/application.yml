@@ -66,13 +66,13 @@ gemini:
     url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent}
     key: ${GEMINI_API_KEY}
 
-naver:
-  api:
-    id: ${NAVER_API_ID:}
-    secret: ${NAVER_API_SECRET:}
+#naver:
+#  api:
+#    id: ${NAVER_API_ID:}
+#    secret: ${NAVER_API_SECRET:}
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:4a8NRS86guvb1rzq1vlFPXOR4Nx96iKv4lnBAzDx8xo}
   access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
   guest-token-expiration: ${JWT_GUEST_EXPIRATION:3600000}
@@ -125,7 +125,7 @@ spring:
       on-profile: main
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: create
     show-sql: false
     properties:
       hibernate:

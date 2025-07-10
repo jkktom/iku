@@ -8,7 +8,7 @@ import {
 import type { LinksFunction, LoaderFunction } from "@remix-run/node";
 import { ClerkApp } from "@clerk/remix";
 import { rootAuthLoader } from "./clerk.server";
-import { SidebarLayout } from "~/components/sidebar-layout";
+import { SidebarLayout } from "./components/sidebar-layout";
 
 import "./tailwind.css";
 

@@ -10,6 +10,7 @@ declare module "@remix-run/node" {
 
 export default defineConfig({
   plugins: [
+    tsconfigPaths(),
     remix({
       future: {
         v3_fetcherPersist: true,
@@ -19,7 +20,6 @@ export default defineConfig({
         v3_lazyRouteDiscovery: true,
       },
     }),
-    tsconfigPaths(),
   ],
   define: {
     global: "globalThis",
@@ -30,9 +30,9 @@ export default defineConfig({
       buffer: "buffer",
     },
   },
-  ssr: {
-    noExternal: false,
-  },
+  // ssr: {
+  //   noExternal: false,
+  // },
   server: {
     proxy: {
       '/api': {
