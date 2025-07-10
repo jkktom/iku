@@ -21,6 +21,18 @@ export default defineConfig({
     }),
     tsconfigPaths(),
   ],
+  define: {
+    global: "globalThis",
+  },
+  resolve: {
+    alias: {
+      stream: "stream-browserify",
+      buffer: "buffer",
+    },
+  },
+  ssr: {
+    noExternal: false,
+  },
   server: {
     proxy: {
       '/api': {

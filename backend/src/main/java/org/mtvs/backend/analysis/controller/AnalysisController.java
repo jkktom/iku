@@ -10,9 +10,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@RestController
-@RequestMapping("/api/analysis")
-@CrossOrigin(origins = "*")
+// @RestController - V2로 대체되어 비활성화
+// @RequestMapping("/api/analysis")
+// @CrossOrigin(origins = "*")
 public class AnalysisController {
 
     private final MatchAnalysisService matchAnalysisService;
