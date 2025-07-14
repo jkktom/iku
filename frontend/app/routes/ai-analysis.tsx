@@ -6,6 +6,12 @@ import { Label } from "~/components/ui/label";
 import { useApi } from "~/utils/api";
 import ReactMarkdown from "react-markdown";
 
+
+interface AIResponseData {
+  analysisResult?: string;
+  [key: string]: unknown;
+}
+
 interface AccountInfo {
   puuid: string;
   gameName: string;
@@ -29,7 +35,7 @@ interface SingleAnalysisResult {
     status: string;
     analysisSummary: string;
     updatedAt: string;
-    aiResponseData: any;
+    aiResponseData: AIResponseData;
   };
   message: string;
 }
@@ -47,7 +53,7 @@ interface MultipleAnalysisResult {
     status: string;
     analysisSummary: string;
     updatedAt: string;
-    aiResponseData: any;
+    aiResponseData: AIResponseData;
   };
   message: string;
 }
@@ -86,11 +92,20 @@ export default function AIAnalysis() {
     setError("");
     
     try {
-      // Riot API로 계정 정보 조회
+      // 1. Riot API로 계정 정보 조회
       const accountResponse = await apiFetch(`/api/riot/account/${playerName}/${tagLine}`);
-      
+
       if (accountResponse.account) {
         setAccountInfo(accountResponse.account);
+        
+        // 2. Analysis API로 초기 레코드 생성
+        await apiFetch(`/api/analysis/init`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(accountResponse.account)
+        });
         
         // 기존 결과 초기화
         setMatchInfo(null);
@@ -115,7 +130,7 @@ export default function AIAnalysis() {
     setError("");
 
     try {
-      // Riot API로 매치 ID 조회
+      // 1. Riot API로 매치 ID 조회
       const matchResponse = await apiFetch(`/api/riot/matches/${accountInfo.puuid}`);
       
       if (matchResponse.selectedMatchId) {

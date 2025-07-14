@@ -19,7 +19,7 @@ public class SingleMatchAnalysis {
     @Column(name = "puuid", nullable = false, length = 78)
     private String puuid;
     
-    @Column(name = "match_id", nullable = false, length = 20)
+    @Column(name = "match_id", nullable = true, length = 20)
     private String matchId;
     
     @Column(name = "target_player_name", length = 50)

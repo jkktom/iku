@@ -3,17 +3,16 @@
 import { useAuth } from "@clerk/remix";
 import { useCallback } from "react";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
 export const useApi = () => {
   const { getToken } = useAuth();
 
   const apiFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const token = await getToken();
 
-    // VITE_API_BASE_URL 값을 가져옵니다.
-    const baseUrl = import.meta.env.VITE_API_BASE_URL;
-
     // 전달된 url과 baseUrl을 합쳐서 전체 URL을 만듭니다.
-    const fullUrl = new URL(url, baseUrl).toString();
+    const fullUrl = new URL(url, API_BASE_URL).toString();
 
     const headers = new Headers(options.headers);
     if (token) {
