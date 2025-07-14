@@ -10,11 +10,11 @@ RUN apt-get update && apt-get install -y \
 # 작업 디렉토리 설정
 WORKDIR /app
 
-# Gradle Wrapper와 설정 파일 복사
+# Gradle Wrapper와 설정 파일 복사 (루트에서 복사)
 COPY gradlew .
 COPY gradle gradle/
-COPY build.gradle .
 COPY settings.gradle .
+COPY backend/build.gradle .
 
 # 실행 권한 부여
 RUN chmod +x ./gradlew
@@ -22,8 +22,8 @@ RUN chmod +x ./gradlew
 # 의존성 다운로드 (캐싱 최적화)
 RUN ./gradlew dependencies --no-daemon
 
-# 소스 코드 복사
-COPY src src/
+# 소스 코드 복사 (backend/src에서 복사)
+COPY backend/src src/
 
 # 개발용 설정
 ENV SPRING_PROFILES_ACTIVE=dev
