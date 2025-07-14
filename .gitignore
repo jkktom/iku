@@ -27,6 +27,10 @@ Thumbs.db
 
 # Environment files
 .env.local
+.env
+
+# SSL certificates (나중에 nginx 사용시)
+nginx/ssl/
 
 # Logs
 logs/
@@ -52,8 +56,6 @@ CLAUDE.md
 # Added by Task Master AI
 dev-debug.log
 # Dependency directories
-# Environment variables
-.env
 # Editor directories and files
 .idea/
 .vscode
@@ -64,3 +66,4 @@ dev-debug.log
 *.sw?
 # OS specific
 .gradle/
+local_resources/

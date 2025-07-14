@@ -1,49 +1,165 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
+
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
   dotenv:
-    location: .env.local
+    location: .env
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/iku-ai-db}
     username: ${DB_USERNAME:user}
     password: ${DB_PASSWORD:5656}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 2
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
   jpa:
     hibernate:
-      ddl-auto: create
-    show-sql: true
+      ddl-auto: ${DDL_AUTO:update}
+    show-sql: ${SHOW_SQL:false}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: ${FORMAT_SQL:false}
         dialect: org.hibernate.dialect.PostgreSQLDialect
         hbm2ddl:
-          auto: create-drop
+          auto: ${HBM2DDL_AUTO:update}
+
   flyway:
-    enabled: false # 테스트용 비활성화
+    enabled: ${FLYWAY_ENABLED:false}
     baseline-on-migrate: true
     baseline-version: 1
+
+# 로깅 설정
+logging:
+  level:
+    org.mtvs: ${LOG_LEVEL_APP:INFO}
+    org.springframework: ${LOG_LEVEL_SPRING:WARN}
+    org.hibernate: ${LOG_LEVEL_HIBERNATE:WARN}
+    org.springframework.web: ${LOG_LEVEL_WEB:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Management 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS:health,info}
+  endpoint:
+    health:
+      show-details: ${HEALTH_SHOW_DETAILS:when_authorized}
+
+# 비즈니스 설정
 chat:
   md-json:
-    storage-dir: ./md-reports
+    storage-dir: ${CHAT_STORAGE_DIR:./md-reports}
+
 gemini:
   api:
-    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent}
     key: ${GEMINI_API_KEY}
-naver:
-  api:
-    id: ${NAVER_API_ID}
-    secret: ${NAVER_API_SECRET}
+
+#naver:
+#  api:
+#    id: ${NAVER_API_ID:}
+#    secret: ${NAVER_API_SECRET:}
+
 jwt:
-  secret: ${JWT_SECRET:4a8NRS86guvb1rzq1vlFPXOR4Nx96iKv4lnBAzDx8xo=}
-  access-token-expiration: 3600000 # 1 hour (ms)
-  refresh-token-expiration: 604800000 # 7 days (ms)
-  guest-token-expiration: 3600000 # 1 hour (ms)
+  secret: ${JWT_SECRET:4a8NRS86guvb1rzq1vlFPXOR4Nx96iKv4lnBAzDx8xo}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+  guest-token-expiration: ${JWT_GUEST_EXPIRATION:3600000}
+
 clerk:
-  domain: giving-ocelot-59.clerk.accounts.dev
-  secret-key : ${CLERK_SECRET_KEY}
+  domain: ${CLERK_DOMAIN:giving-ocelot-59.clerk.accounts.dev}
+  secret-key: ${CLERK_SECRET_KEY}
 
 riot:
   api:
     key: ${RIOT_API_KEY}
+
+---
+# Local 환경 (기본)
+spring:
+  config:
+    activate:
+      on-profile: local
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+logging:
+  level:
+    org.mtvs: DEBUG
+    org.springframework.web: DEBUG
+
+---
+# Docker 환경
+spring:
+  config:
+    activate:
+      on-profile: docker
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+logging:
+  level:
+    org.mtvs: INFO
+    org.springframework: WARN
+
+---
+# Main 브랜치 (프로덕션)
+spring:
+  config:
+    activate:
+      on-profile: main
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+logging:
+  level:
+    org.mtvs: WARN
+    org.springframework: WARN
+    org.hibernate: WARN
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+---
+# Dev 브랜치 (개발)
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+logging:
+  level:
+    org.mtvs: DEBUG
+    org.springframework.web: DEBUG
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
