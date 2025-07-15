@@ -44,41 +44,23 @@ public class SingleMatchAnalysisService {
     /**
      * 단일 매치 분석 초기 레코드 생성
      */
-    public SingleMatchAnalysis createInitialRecord(AccountDto account) {
-        logger.info("Creating initial single match analysis record for puuid: {}", account.getPuuid());
+    public SingleMatchAnalysis createInitialRecord(AccountDto account, String matchId) {
+        logger.info("Creating initial single match analysis record for puuid: {} with matchId: {}", account.getPuuid(), matchId);
+        
+        // 중복 분석 방지
+        if (singleMatchAnalysisRepository.existsByPuuidAndMatchId(account.getPuuid(), matchId)) {
+            throw new IllegalArgumentException("해당 매치는 이미 분석이 요청되었습니다.");
+        }
         
         SingleMatchAnalysis analysis = new SingleMatchAnalysis();
         analysis.setPuuid(account.getPuuid());
+        analysis.setMatchId(matchId);
         analysis.setTargetPlayerName(account.getGameName() + "#" + account.getTagLine());
         analysis.setAnalysisStatus(SingleMatchAnalysis.AnalysisStatus.REQUESTED);
         
         return singleMatchAnalysisRepository.save(analysis);
     }
 
-    /**
-     * 매치 ID로 레코드 업데이트
-     */
-    public SingleMatchAnalysis updateWithMatchId(String puuid, String matchId) {
-        logger.info("Updating single match analysis with matchId: {} for puuid: {}", matchId, puuid);
-        
-        // 중복 분석 방지
-        if (singleMatchAnalysisRepository.existsByPuuidAndMatchId(puuid, matchId)) {
-            throw new IllegalArgumentException("해당 매치는 이미 분석이 요청되었습니다.");
-        }
-        
-        // 가장 최근 REQUESTED 상태의 레코드 찾기
-        List<SingleMatchAnalysis> requestedAnalyses = singleMatchAnalysisRepository
-                .findByAnalysisStatusOrderByCreatedAtDesc(SingleMatchAnalysis.AnalysisStatus.REQUESTED);
-        
-        SingleMatchAnalysis analysis = requestedAnalyses.stream()
-                .filter(a -> a.getPuuid().equals(puuid))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("분석 요청 레코드를 찾을 수 없습니다."));
-        
-        analysis.setMatchId(matchId);
-        
-        return singleMatchAnalysisRepository.save(analysis);
-    }
 
     /**
      * 단일 매치 AI 분석 수행

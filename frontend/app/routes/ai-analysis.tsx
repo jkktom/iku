@@ -81,7 +81,7 @@ export default function AIAnalysis() {
   
   const [error, setError] = useState<string>("");
 
-  // 1단계: 계정 정보 조회 및 분석 초기화
+  // 1단계: 계정 정보 조회
   const handleGetAccount = async () => {
     if (!playerName || !tagLine) {
       setError("플레이어명과 태그를 모두 입력해주세요.");
@@ -122,7 +122,7 @@ export default function AIAnalysis() {
     }
   };
 
-  // 2단계: 최신 매치 조회 및 매치 ID 업데이트
+  // 2단계: 최신 매치 조회
   const handleGetMatches = async () => {
     if (!accountInfo) return;
 
@@ -134,11 +134,6 @@ export default function AIAnalysis() {
       const matchResponse = await apiFetch(`/api/riot/matches/${accountInfo.puuid}`);
 
       if (matchResponse.selectedMatchId) {
-        // 2. Analysis API로 매치 ID 업데이트 (단일 분석용)
-        await apiFetch(`/api/analysis/match/${accountInfo.puuid}/${matchResponse.selectedMatchId}`, {
-          method: 'PUT'
-        });
-        
         setMatchInfo({
           matchIds: matchResponse.matchIds,
           selectedMatchId: matchResponse.selectedMatchId
@@ -166,8 +161,23 @@ export default function AIAnalysis() {
     setError("");
 
     try {
+      // 1. 단일 분석 초기 레코드 생성
+      await apiFetch(`/api/analysis/single/init`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          puuid: accountInfo.puuid,
+          gameName: accountInfo.gameName,
+          tagLine: accountInfo.tagLine,
+          matchId: matchInfo.selectedMatchId
+        })
+      });
+
+      // 2. AI 분석 수행
       const response = await apiFetch(
-        `/api/analysis/analyze/${accountInfo.puuid}/${matchInfo.selectedMatchId}`,
+        `/api/analysis/single/analyze/${accountInfo.puuid}/${matchInfo.selectedMatchId}`,
         { method: 'POST' }
       );
       
@@ -189,8 +199,34 @@ export default function AIAnalysis() {
     setError("");
 
     try {
+      // 1. 다중 분석 초기 레코드 생성
+      await apiFetch(`/api/analysis/multiple/init`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          puuid: accountInfo.puuid,
+          gameName: accountInfo.gameName,
+          tagLine: accountInfo.tagLine,
+          matchCount: 5
+        })
+      });
+
+      // 2. 매치 목록 업데이트
+      await apiFetch(`/api/analysis/multiple/matches/${accountInfo.puuid}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          matchCount: 5
+        })
+      });
+
+      // 3. AI 분석 수행
       const response = await apiFetch(
-        `/api/analysis/analyze-multiple/${accountInfo.puuid}?matchCount=5`,
+        `/api/analysis/multiple/analyze/${accountInfo.puuid}`,
         { method: 'POST' }
       );
       
@@ -224,7 +260,7 @@ export default function AIAnalysis() {
       <Card>
         <CardHeader>
           <CardTitle>1단계: 계정 정보 조회</CardTitle>
-          <CardDescription>플레이어명과 태그를 입력하여 분석을 시작합니다</CardDescription>
+          <CardDescription>플레이어명과 태그를 입력하여 계정 정보를 조회합니다</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -252,7 +288,7 @@ export default function AIAnalysis() {
             disabled={isLoadingAccount}
             className="w-full"
           >
-            {isLoadingAccount ? "조회 중..." : "1단계: 계정 조회 및 분석 초기화"}
+            {isLoadingAccount ? "조회 중..." : "1단계: 계정 정보 조회"}
           </Button>
           
           {accountInfo && (
@@ -270,7 +306,7 @@ export default function AIAnalysis() {
         <Card>
           <CardHeader>
             <CardTitle>2단계: 최신 게임 조회</CardTitle>
-            <CardDescription>가장 최신 게임의 매치 정보를 가져옵니다</CardDescription>
+            <CardDescription>분석할 게임을 선택하기 위해 최신 게임 정보를 가져옵니다</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button 

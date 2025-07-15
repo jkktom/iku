@@ -16,8 +16,8 @@ services:
 
   backend:
     build: 
-      context: ./backend
-      dockerfile: Dockerfile.dev
+      context: .  # 루트 디렉토리로 변경
+      dockerfile: backend/Dockerfile.dev
     container_name: iku-backend-dev
     ports:
       - "8080:8080"
