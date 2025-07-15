@@ -112,7 +112,7 @@ export function AnnouncementBoard() {
         <div className="flex items-center justify-between mb-8 w-full max-w-4xl mx-auto">
           {/* 왼쪽: 공지사항 텍스트 */}
           <div className="flex flex-col items-start">
-            <h1 className="text-3xl font-bold text-white">공지사항</h1>
+            <h1 className="text-3xl font-bold text-white">Q&A</h1>
             <Badge className="bg-blue-600 text-white w-fit mt-2">
               총 {totalElements}개
             </Badge>
@@ -149,7 +149,7 @@ export function AnnouncementBoard() {
           </CardHeader>
           <CardContent className="p-0">
             {safeAnnouncements.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">등록된 공지사항이 없습니다.</div>
+              <div className="text-center py-12 text-slate-400">등록된 Q&A가 없습니다.</div>
             ) : (
               <div className="divide-y divide-slate-700">
                 {safeAnnouncements.map((announcement, index) => (
