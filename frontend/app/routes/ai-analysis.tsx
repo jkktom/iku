@@ -94,18 +94,15 @@ export default function AIAnalysis() {
     try {
       // 1. Riot API로 계정 정보 조회
       const accountResponse = await apiFetch(`/api/riot/account/${playerName}/${tagLine}`);
+      
+      console.log("1. Riot API 응답:", accountResponse);
 
       if (accountResponse.account) {
         setAccountInfo(accountResponse.account);
         
-        // 2. Analysis API로 초기 레코드 생성
-        await apiFetch(`/api/analysis/init`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(accountResponse.account)
-        });
+        // 디버깅: 실제 전송할 데이터 확인
+        console.log("2. 계정 정보 조회 완료:", accountResponse.account);
+        console.log("3. JSON 변환 결과:", JSON.stringify(accountResponse.account));
         
         // 기존 결과 초기화
         setMatchInfo(null);
@@ -115,8 +112,8 @@ export default function AIAnalysis() {
         setError("계정 정보를 찾을 수 없습니다.");
       }
     } catch (err) {
+      console.error("4. 에러 발생:", err);
       setError("계정 정보 조회에 실패했습니다.");
-      console.error(err);
     } finally {
       setIsLoadingAccount(false);
     }
@@ -161,23 +158,9 @@ export default function AIAnalysis() {
     setError("");
 
     try {
-      // 1. 단일 분석 초기 레코드 생성
-      await apiFetch(`/api/analysis/single/init`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          puuid: accountInfo.puuid,
-          gameName: accountInfo.gameName,
-          tagLine: accountInfo.tagLine,
-          matchId: matchInfo.selectedMatchId
-        })
-      });
-
-      // 2. AI 분석 수행
+      // 바로 AI 분석 수행 (한번에 처리)
       const response = await apiFetch(
-        `/api/analysis/single/analyze/${accountInfo.puuid}/${matchInfo.selectedMatchId}`,
+        `/api/analysis/analyze/${accountInfo.puuid}/${matchInfo.selectedMatchId}`,
         { method: 'POST' }
       );
       
@@ -199,34 +182,9 @@ export default function AIAnalysis() {
     setError("");
 
     try {
-      // 1. 다중 분석 초기 레코드 생성
-      await apiFetch(`/api/analysis/multiple/init`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          puuid: accountInfo.puuid,
-          gameName: accountInfo.gameName,
-          tagLine: accountInfo.tagLine,
-          matchCount: 5
-        })
-      });
-
-      // 2. 매치 목록 업데이트
-      await apiFetch(`/api/analysis/multiple/matches/${accountInfo.puuid}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          matchCount: 5
-        })
-      });
-
-      // 3. AI 분석 수행
+      // 바로 AI 분석 수행 (한번에 처리)
       const response = await apiFetch(
-        `/api/analysis/multiple/analyze/${accountInfo.puuid}`,
+        `/api/analysis/analyze-multiple/${accountInfo.puuid}?matchCount=5`,
         { method: 'POST' }
       );
       
