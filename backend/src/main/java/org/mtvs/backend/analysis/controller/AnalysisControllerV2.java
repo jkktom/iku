@@ -5,6 +5,7 @@ import org.mtvs.backend.analysis.entity.SingleMatchAnalysis;
 import org.mtvs.backend.analysis.service.MultipleMatchAnalysisService;
 import org.mtvs.backend.analysis.service.SingleMatchAnalysisService;
 import org.mtvs.backend.riot.dto.AccountDto;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class AnalysisControllerV2 {
     private final MultipleMatchAnalysisService multipleMatchAnalysisService;
 
     public AnalysisControllerV2(SingleMatchAnalysisService singleMatchAnalysisService,
-                               MultipleMatchAnalysisService multipleMatchAnalysisService) {
+                                MultipleMatchAnalysisService multipleMatchAnalysisService) {
         this.singleMatchAnalysisService = singleMatchAnalysisService;
         this.multipleMatchAnalysisService = multipleMatchAnalysisService;
     }
@@ -34,18 +35,18 @@ public class AnalysisControllerV2 {
     public ResponseEntity<Map<String, Object>> createInitialRecord(@RequestBody AccountDto account) {
         try {
             SingleMatchAnalysis savedRecord = singleMatchAnalysisService.createInitialRecord(account);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("analysisRecord", Map.of(
-                "id", savedRecord.getId(),
-                "puuid", savedRecord.getPuuid(),
-                "status", savedRecord.getAnalysisStatus(),
-                "createdAt", savedRecord.getCreatedAt()
+                    "id", savedRecord.getId(),
+                    "puuid", savedRecord.getPuuid(),
+                    "status", savedRecord.getAnalysisStatus(),
+                    "createdAt", savedRecord.getCreatedAt()
             ));
             response.put("message", "단일 매치 분석 레코드 생성 완료");
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -60,22 +61,22 @@ public class AnalysisControllerV2 {
     public ResponseEntity<Map<String, Object>> updateWithMatchId(
             @PathVariable String puuid,
             @PathVariable String matchId) {
-        
+
         try {
             SingleMatchAnalysis updatedRecord = singleMatchAnalysisService.updateWithMatchId(puuid, matchId);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("analysisRecord", Map.of(
-                "id", updatedRecord.getId(),
-                "puuid", updatedRecord.getPuuid(),
-                "matchId", updatedRecord.getMatchId(),
-                "status", updatedRecord.getAnalysisStatus(),
-                "updatedAt", updatedRecord.getUpdatedAt()
+                    "id", updatedRecord.getId(),
+                    "puuid", updatedRecord.getPuuid(),
+                    "matchId", updatedRecord.getMatchId(),
+                    "status", updatedRecord.getAnalysisStatus(),
+                    "updatedAt", updatedRecord.getUpdatedAt()
             ));
             response.put("message", "매치 ID 업데이트 완료");
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -90,16 +91,16 @@ public class AnalysisControllerV2 {
     public ResponseEntity<Map<String, Object>> performSingleAIAnalysis(
             @PathVariable String puuid,
             @PathVariable String matchId) {
-        
+
         try {
             Map<String, Object> response = singleMatchAnalysisService.performAIAnalysisAndGetResponse(puuid, matchId);
-            
+
             Map<String, Object> finalResponse = new HashMap<>();
             finalResponse.put("analysisRecord", response);
             finalResponse.put("message", "단일 매치 AI 분석이 완료되었습니다.");
-            
+
             return ResponseEntity.ok(finalResponse);
-            
+
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -114,22 +115,22 @@ public class AnalysisControllerV2 {
     public ResponseEntity<Map<String, Object>> performMultipleAIAnalysis(
             @PathVariable String puuid,
             @RequestParam(defaultValue = "5") int matchCount) {
-        
+
         try {
             if (matchCount < 1 || matchCount > 5) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("error", "매치 개수는 1~5개만 가능합니다. 입력값: " + matchCount);
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
+
             Map<String, Object> response = multipleMatchAnalysisService.performMultipleAIAnalysisAndGetResponse(puuid, matchCount);
-            
+
             Map<String, Object> finalResponse = new HashMap<>();
             finalResponse.put("analysisRecord", response);
             finalResponse.put("message", matchCount + "개 게임 종합 AI 분석이 완료되었습니다.");
-            
+
             return ResponseEntity.ok(finalResponse);
-            
+
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -160,7 +161,7 @@ public class AnalysisControllerV2 {
      */
     @GetMapping("/single/match/{puuid}/{matchId}")
     public ResponseEntity<SingleMatchAnalysis> getSingleAnalysisByPuuidAndMatchId(
-            @PathVariable String puuid, 
+            @PathVariable String puuid,
             @PathVariable String matchId) {
         return singleMatchAnalysisService.getAnalysisByPuuidAndMatchId(puuid, matchId)
                 .map(ResponseEntity::ok)
@@ -174,17 +175,17 @@ public class AnalysisControllerV2 {
     public ResponseEntity<Map<String, Object>> getCompletedAnalysis(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        
+
         try {
             List<SingleMatchAnalysis> singleAnalyses = singleMatchAnalysisService.getAnalysisByStatusWithPaging(
                     SingleMatchAnalysis.AnalysisStatus.COMPLETED, page, size);
-            
+
             List<MultipleMatchAnalysis> multipleAnalyses = multipleMatchAnalysisService.getAnalysisByStatusWithPaging(
                     MultipleMatchAnalysis.AnalysisStatus.COMPLETED, page, size);
-            
+
             // 통합 응답 데이터 구성
             List<Map<String, Object>> combinedResults = new ArrayList<>();
-            
+
             // 단일 분석 결과 변환
             for (SingleMatchAnalysis analysis : singleAnalyses) {
                 Map<String, Object> result = new HashMap<>();
@@ -194,13 +195,18 @@ public class AnalysisControllerV2 {
                 result.put("targetPlayerName", analysis.getTargetPlayerName());
                 result.put("targetChampion", analysis.getTargetChampion());
                 result.put("analysisType", "SINGLE");
-                result.put("status", analysis.getAnalysisStatus().name());
+                result.put("analysisStatus", analysis.getAnalysisStatus().name());
                 result.put("analysisSummary", analysis.getAnalysisSummary());
-                result.put("updatedAt", analysis.getUpdatedAt());
-                result.put("aiResponseData", analysis.getAiResponseData());
+
+                // LocalDateTime을 문자열로 변환
+                result.put("updatedAt", analysis.getUpdatedAt() != null ? analysis.getUpdatedAt().toString() : "");
+
+                // aiResponseData가 null인 경우 빈 객체로 설정
+                result.put("aiResponseData", analysis.getAiResponseData() != null ? analysis.getAiResponseData() : new HashMap<>());
+
                 combinedResults.add(result);
             }
-            
+
             // 다중 분석 결과 변환
             for (MultipleMatchAnalysis analysis : multipleAnalyses) {
                 Map<String, Object> result = new HashMap<>();
@@ -211,36 +217,67 @@ public class AnalysisControllerV2 {
                 result.put("analysisType", "MULTIPLE");
                 result.put("matchCount", analysis.getMatchCount());
                 result.put("analyzedMatchIds", analysis.getAnalyzedMatchIds());
-                result.put("status", analysis.getAnalysisStatus().name());
+                result.put("analysisStatus", analysis.getAnalysisStatus().name());
                 result.put("analysisSummary", analysis.getAnalysisSummary());
-                result.put("updatedAt", analysis.getUpdatedAt());
-                result.put("aiResponseData", analysis.getAiResponseData());
+
+                // LocalDateTime을 문자열로 변환
+                result.put("updatedAt", analysis.getUpdatedAt() != null ? analysis.getUpdatedAt().toString() : "");
+
+                // aiResponseData가 null인 경우 빈 객체로 설정
+                result.put("aiResponseData", analysis.getAiResponseData() != null ? analysis.getAiResponseData() : new HashMap<>());
                 combinedResults.add(result);
             }
-            
-            // 최신 순으로 정렬
+
+            // 정렬 로직 수정 - null 체크 추가 및 안전한 비교
             combinedResults.sort((a, b) -> {
-                Object aDate = a.get("updatedAt");
-                Object bDate = b.get("updatedAt");
-                if (aDate instanceof java.time.LocalDateTime && bDate instanceof java.time.LocalDateTime) {
-                    return ((java.time.LocalDateTime) bDate).compareTo((java.time.LocalDateTime) aDate);
-                }
-                return 0;
+                String aDate = (String) a.get("updatedAt");
+                String bDate = (String) b.get("updatedAt");
+
+                // null 체크
+                if (aDate == null && bDate == null) return 0;
+                if (aDate == null) return 1;  // null은 마지막에 배치
+                if (bDate == null) return -1;
+
+                // 내림차순 정렬 (최신순)
+                return bDate.compareTo(aDate);
             });
-            
+
+            // 페이징 처리
+            int totalElements = combinedResults.size();
+            int fromIndex = page * size;
+            int toIndex = Math.min(fromIndex + size, totalElements);
+
+            // 인덱스 범위 체크
+            List<Map<String, Object>> pagedResults;
+            if (fromIndex < totalElements) {
+                pagedResults = combinedResults.subList(fromIndex, toIndex);
+            } else {
+                pagedResults = new ArrayList<>();
+            }
+
             Map<String, Object> response = new HashMap<>();
-            response.put("content", combinedResults);
+            response.put("content", pagedResults);
             response.put("totalElements", combinedResults.size());
             response.put("number", page);
             response.put("size", size);
             response.put("totalPages", (int) Math.ceil((double) combinedResults.size() / size));
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
+            e.printStackTrace();
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            // return ResponseEntity.badRequest().body(errorResponse);
+
+            // 스택 트레이스를 문자열 목록으로 변환
+            List<String> stackTraceList = new ArrayList<>();
+            for (StackTraceElement element : e.getStackTrace()) {
+                stackTraceList.add(element.toString());
+            }
+            errorResponse.put("stackTrace", stackTraceList);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
@@ -254,23 +291,23 @@ public class AnalysisControllerV2 {
             long singleCompletedCount = singleMatchAnalysisService.getCompletedCount();
             long multipleTotalCount = multipleMatchAnalysisService.getTotalCount();
             long multipleCompletedCount = multipleMatchAnalysisService.getCompletedCount();
-            
+
             Map<String, Object> stats = new HashMap<>();
             stats.put("singleAnalysis", Map.of(
-                "totalCount", singleTotalCount,
-                "completedCount", singleCompletedCount
+                    "totalCount", singleTotalCount,
+                    "completedCount", singleCompletedCount
             ));
             stats.put("multipleAnalysis", Map.of(
-                "totalCount", multipleTotalCount,
-                "completedCount", multipleCompletedCount
+                    "totalCount", multipleTotalCount,
+                    "completedCount", multipleCompletedCount
             ));
             stats.put("overall", Map.of(
-                "totalCount", singleTotalCount + multipleTotalCount,
-                "completedCount", singleCompletedCount + multipleCompletedCount
+                    "totalCount", singleTotalCount + multipleTotalCount,
+                    "completedCount", singleCompletedCount + multipleCompletedCount
             ));
-            
+
             return ResponseEntity.ok(stats);
-            
+
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -288,7 +325,6 @@ public class AnalysisControllerV2 {
         result.put("multipleAnalysis", multipleMatchAnalysisService.getPendingAnalysis());
         return ResponseEntity.ok(result);
     }
-
     /**
      * 실패한 분석 조회
      */
@@ -300,3 +336,4 @@ public class AnalysisControllerV2 {
         return ResponseEntity.ok(result);
     }
 }
+
