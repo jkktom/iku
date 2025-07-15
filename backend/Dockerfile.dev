@@ -1,29 +1,36 @@
-# Backend Dev 브랜치용 Dockerfile (개발 모드)
+# 개발용 백엔드 Dockerfile (핫 리로드 지원)
 FROM openjdk:17-jdk-slim
-
-WORKDIR /app
 
 # 개발용 패키지 설치
 RUN apt-get update && apt-get install -y \
-    git \
     curl \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
-# Gradle Wrapper 복사
-COPY gradlew .
-COPY gradle gradle
-COPY build.gradle .
-COPY settings.gradle .
+# 작업 디렉토리 설정
+WORKDIR /app
 
-# 소스 코드 복사
-COPY src src
+# Gradle Wrapper와 설정 파일 복사 (루트에서 복사)
+COPY gradlew .
+COPY gradle gradle/
+COPY settings.gradle .
+COPY backend/build.gradle .
 
 # 실행 권한 부여
 RUN chmod +x ./gradlew
 
-# 의존성 미리 다운로드 (캐싱 최적화)
-RUN ./gradlew dependencies
+# 의존성 다운로드 (캐싱 최적화)
+RUN ./gradlew dependencies --no-daemon
 
-# 개발 모드로 실행 (Hot reload 지원)
-EXPOSE 8080
-CMD ["./gradlew", "bootRun", "--continuous"]
+# 소스 코드 복사 (backend/src에서 복사)
+COPY backend/src src/
+
+# 개발용 설정
+ENV SPRING_PROFILES_ACTIVE=dev
+ENV JAVA_OPTS="-Dspring.devtools.restart.enabled=true -Dspring.devtools.livereload.enabled=true"
+
+# 포트 노출
+EXPOSE 8080 35729
+
+# 개발 모드로 실행 (핫 리로드)
+CMD ["./gradlew", "bootRun", "--args='--spring.profiles.active=dev'"]

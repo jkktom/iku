@@ -1,5 +1,5 @@
 import type { MetaFunction } from "@remix-run/node";
-import { AnnouncementForm } from "~/components/announcement-form";
+import { AnnouncementForm } from "../components/announcement-form";
 import { useNavigate } from "@remix-run/react";
 
 export const meta: MetaFunction = () => {

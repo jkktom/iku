@@ -1,20 +1,28 @@
-# Frontend Dev 브랜치용 Dockerfile (Development)
+# 개발용 프론트엔드 Dockerfile (핫 리로드 지원)
 FROM node:20-alpine
 
+# 개발용 패키지 설치
+RUN apk add --no-cache curl
+
+# 작업 디렉토리 설정
 WORKDIR /app
 
-# 패키지 파일들 복사
+# package.json과 package-lock.json 복사
 COPY package*.json ./
 
-# 모든 의존성 설치 (개발용 포함)
+# 의존성 설치 (개발 의존성 포함)
 RUN npm ci
 
 # 소스 코드 복사
 COPY . .
 
-# 환경변수 파일 복사
-COPY .env .
+# 개발용 환경변수
+ENV NODE_ENV=development
+ENV CHOKIDAR_USEPOLLING=true
+ENV WATCHPACK_POLLING=true
 
-# 개발 서버 실행 (Hot reload 지원)
+# 포트 노출
 EXPOSE 3000
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# 개발 서버 실행 (핫 리로드)
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]

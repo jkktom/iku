@@ -10,9 +10,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@RestController
-@RequestMapping("/api/analysis")
-@CrossOrigin(origins = "*")
+// @RestController - V2로 대체되어 비활성화
+// @RequestMapping("/api/analysis")
+// @CrossOrigin(origins = "*")
 public class AnalysisController {
 
     private final MatchAnalysisService matchAnalysisService;
@@ -160,13 +160,38 @@ public class AnalysisController {
     }
     
     /**
-     * 분석 상태별 조회
+     * 분석 상태별 조회 (페이징 적용)
      */
     @GetMapping("/status/{status}")
     public ResponseEntity<List<MatchAnalysis>> getAnalysisByStatus(
-            @PathVariable MatchAnalysis.AnalysisStatus status) {
-        List<MatchAnalysis> analyses = matchAnalysisService.getAnalysisByStatus(status);
+            @PathVariable MatchAnalysis.AnalysisStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        List<MatchAnalysis> analyses = matchAnalysisService.getAnalysisByStatusWithPaging(status, page, size);
         return ResponseEntity.ok(analyses);
+    }
+
+    /**
+     * 테스트용 - 단순 카운트 조회
+     */
+    @GetMapping("/test/count")
+    public ResponseEntity<Map<String, Object>> getAnalysisCount() {
+        try {
+            long totalCount = matchAnalysisService.getTotalCount();
+            long completedCount = matchAnalysisService.getCompletedCount();
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("totalCount", totalCount);
+            result.put("completedCount", completedCount);
+            result.put("status", "success");
+            
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("error", e.getMessage());
+            errorResult.put("status", "failed");
+            return ResponseEntity.ok(errorResult);
+        }
     }
 
     /**
