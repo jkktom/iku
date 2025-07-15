@@ -336,3 +336,4 @@ public class AnalysisControllerV2 {
         return ResponseEntity.ok(result);
     }
 }
+
