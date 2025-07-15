@@ -179,12 +179,12 @@ public class AnalysisController {
         try {
             long totalCount = matchAnalysisService.getTotalCount();
             long completedCount = matchAnalysisService.getCompletedCount();
-            
+
             Map<String, Object> result = new HashMap<>();
             result.put("totalCount", totalCount);
             result.put("completedCount", completedCount);
             result.put("status", "success");
-            
+
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             Map<String, Object> errorResult = new HashMap<>();

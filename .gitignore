@@ -51,6 +51,7 @@ dist/
 .roo
 cursor_resource/
 CLAUDE.md
+.env.example
 
 # Added by Task Master AI
 dev-debug.log
