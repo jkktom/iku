@@ -31,9 +31,8 @@ public class AnalysisControllerV2 {
     /**
      * 1단계: 단일 매치 분석 초기 레코드 생성
      */
-    @PostMapping("/single/init")
-    public ResponseEntity<Map<String, Object>> createSingleMatchInitialRecord(
-            @RequestBody Map<String, Object> request) {
+    @PostMapping("/init")
+    public ResponseEntity<Map<String, Object>> createSingleMatchInitialRecord(@RequestBody AccountDto account) {
         try {
             SingleMatchAnalysis savedRecord = singleMatchAnalysisService.createInitialRecord(account);
 
@@ -57,50 +56,10 @@ public class AnalysisControllerV2 {
     }
 
     /**
-     * 1단계: 다중 매치 분석 초기 레코드 생성
-     */
-    @PostMapping("/multiple/init")
-    public ResponseEntity<Map<String, Object>> createMultipleMatchInitialRecord(
-            @RequestBody Map<String, Object> request) {
-        try {
-            AccountDto account = new AccountDto();
-            account.setPuuid((String) request.get("puuid"));
-            account.setGameName((String) request.get("gameName"));
-            account.setTagLine((String) request.get("tagLine"));
-            
-            Integer matchCount = (Integer) request.get("matchCount");
-            if (matchCount == null || matchCount < 1 || matchCount > 5) {
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("error", "매치 개수는 1~5개만 가능합니다.");
-                return ResponseEntity.badRequest().body(errorResponse);
-            }
-            
-            MultipleMatchAnalysis savedRecord = multipleMatchAnalysisService.createInitialRecord(account, matchCount);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("analysisRecord", Map.of(
-                "id", savedRecord.getId(),
-                "puuid", savedRecord.getPuuid(),
-                "matchCount", savedRecord.getMatchCount(),
-                "status", savedRecord.getAnalysisStatus(),
-                "createdAt", savedRecord.getCreatedAt()
-            ));
-            response.put("message", "다중 매치 분석 레코드 생성 완료");
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
-        }
-    }
-
-    /**
      * 2단계: 다중 매치 분석 대상 매치 ID 목록 업데이트
      */
-    @PutMapping("/multiple/matches/{puuid}")
-    public ResponseEntity<Map<String, Object>> updateMultipleMatchIds(
+    @PutMapping("/match/{puuid}/{matchId}")
+    public ResponseEntity<Map<String, Object>>updateWithMatchId(
             @PathVariable String puuid,
 
       @PathVariable String matchId) {
@@ -130,7 +89,7 @@ public class AnalysisControllerV2 {
     /**
      * 3단계: 단일 매치 AI 분석 수행
      */
-    @PostMapping("/single/analyze/{puuid}/{matchId}")
+    @PostMapping("/analyze/{puuid}/{matchId}")
     public ResponseEntity<Map<String, Object>> performSingleAIAnalysis(
             @PathVariable String puuid,
             @PathVariable String matchId) {
@@ -154,7 +113,7 @@ public class AnalysisControllerV2 {
     /**
      * 3단계: 다중 매치 AI 분석 수행
      */
-    @PostMapping("/multiple/analyze/{puuid}")
+    @PostMapping("/analyze-multiple/{puuid}")
     public ResponseEntity<Map<String, Object>> performMultipleAIAnalysis(
 
       @PathVariable String puuid,
