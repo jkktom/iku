@@ -74,7 +74,7 @@ export default function AIAnalysis() {
   // Step 3-1: Single Match Analysis
   const [singleAnalysisResult, setSingleAnalysisResult] = useState<SingleAnalysisResult | null>(null);
   const [isLoadingSingleAnalysis, setIsLoadingSingleAnalysis] = useState(false);
-  
+
   // Step 3-2: Multiple Match Analysis (5게임 고정)
   const [multipleAnalysisResult, setMultipleAnalysisResult] = useState<MultipleAnalysisResult | null>(null);
   const [isLoadingMultipleAnalysis, setIsLoadingMultipleAnalysis] = useState(false);
@@ -132,13 +132,13 @@ export default function AIAnalysis() {
     try {
       // 1. Riot API로 매치 ID 조회
       const matchResponse = await apiFetch(`/api/riot/matches/${accountInfo.puuid}`);
-      
+
       if (matchResponse.selectedMatchId) {
         setMatchInfo({
           matchIds: matchResponse.matchIds,
           selectedMatchId: matchResponse.selectedMatchId
         });
-        
+
         // 기존 분석 결과 초기화
         setSingleAnalysisResult(null);
         setMultipleAnalysisResult(null);
@@ -247,7 +247,7 @@ export default function AIAnalysis() {
           <h1 className="text-2xl font-bold text-gray-900">AI 게임 분석</h1>
           <p className="text-gray-600 mt-2">리그 오브 레전드 게임 플레이를 AI로 분석해보세요</p>
         </div>
-        
+
         <div className="space-y-6">
 
       {error && (
@@ -341,8 +341,8 @@ export default function AIAnalysis() {
               <div className="space-y-3">
                 <h4 className="font-semibold text-gray-900">3-1. 단일 게임 분석</h4>
                 <p className="text-sm text-gray-600">최신 게임 1개에 대한 상세 분석</p>
-                <Button 
-                  onClick={handleSingleAIAnalysis} 
+                <Button
+                  onClick={handleSingleAIAnalysis}
                   disabled={isLoadingSingleAnalysis}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
@@ -354,8 +354,8 @@ export default function AIAnalysis() {
               <div className="space-y-3">
                 <h4 className="font-semibold text-gray-900">3-2. 종합 게임 분석</h4>
                 <p className="text-sm text-gray-600">최근 5게임에 대한 종합 분석</p>
-                <Button 
-                  onClick={handleMultipleAIAnalysis} 
+                <Button
+                  onClick={handleMultipleAIAnalysis}
                   disabled={isLoadingMultipleAnalysis}
                   className="w-full bg-green-600 hover:bg-green-700"
                 >
@@ -395,19 +395,19 @@ export default function AIAnalysis() {
                     <p><strong>분석 완료:</strong> {new Date(singleAnalysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
                   </div>
                 </div>
-                
+
                 <div className="mt-4">
                   <strong>분석 결과:</strong>
                   <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
                     <div className="prose prose-sm max-w-none">
                       <ReactMarkdown>
-                        {singleAnalysisResult.analysisRecord.aiResponseData?.analysisResult || 
+                        {singleAnalysisResult.analysisRecord.aiResponseData?.analysisResult ||
                          singleAnalysisResult.analysisRecord.analysisSummary}
                       </ReactMarkdown>
                     </div>
                   </div>
                 </div>
-                
+
                 {singleAnalysisResult.analysisRecord.aiResponseData && (
                   <div className="mt-4">
                     <strong>상세 데이터:</strong>
@@ -445,7 +445,7 @@ export default function AIAnalysis() {
                     <p><strong>분석 완료:</strong> {new Date(multipleAnalysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
                   </div>
                 </div>
-                
+
                 <div className="mt-4">
                   <strong>분석된 매치 ID 목록:</strong>
                   <div className="bg-white p-3 rounded border mt-2">
@@ -458,19 +458,19 @@ export default function AIAnalysis() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mt-4">
                   <strong>종합 분석 결과:</strong>
                   <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
                     <div className="prose prose-sm max-w-none">
                       <ReactMarkdown>
-                        {multipleAnalysisResult.analysisRecord.aiResponseData?.analysisResult || 
+                        {multipleAnalysisResult.analysisRecord.aiResponseData?.analysisResult ||
                          multipleAnalysisResult.analysisRecord.analysisSummary}
                       </ReactMarkdown>
                     </div>
                   </div>
                 </div>
-                
+
                 {multipleAnalysisResult.analysisRecord.aiResponseData && (
                   <div className="mt-4">
                     <strong>상세 분석 데이터:</strong>
