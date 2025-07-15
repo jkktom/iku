@@ -97,8 +97,17 @@ public class SingleMatchAnalysisService {
     public Map<String, Object> performAIAnalysisAndGetResponse(String puuid, String matchId) {
         logger.info("Performing AI analysis for puuid: {}, matchId: {}", puuid, matchId);
         
+        // 레코드가 없으면 새로 생성
         SingleMatchAnalysis analysis = singleMatchAnalysisRepository.findByPuuidAndMatchId(puuid, matchId)
-                .orElseThrow(() -> new IllegalArgumentException("분석 레코드를 찾을 수 없습니다."));
+                .orElseGet(() -> {
+                    logger.info("No existing record found, creating new analysis record for puuid: {}, matchId: {}", puuid, matchId);
+                    SingleMatchAnalysis newAnalysis = new SingleMatchAnalysis();
+                    newAnalysis.setPuuid(puuid);
+                    newAnalysis.setMatchId(matchId);
+                    newAnalysis.setTargetPlayerName("Temporary"); // 임시값, 나중에 매치 데이터에서 업데이트
+                    newAnalysis.setAnalysisStatus(SingleMatchAnalysis.AnalysisStatus.REQUESTED);
+                    return singleMatchAnalysisRepository.save(newAnalysis);
+                });
         
         try {
             analysis.setAnalysisStatus(SingleMatchAnalysis.AnalysisStatus.PROCESSING);
@@ -113,13 +122,19 @@ public class SingleMatchAnalysisService {
                 analysis.setMatchDuration(matchDetail.getInfo().getGameDuration());
                 analysis.setGameMode(matchDetail.getInfo().getGameMode());
                 
-                // 타겟 플레이어의 챔피언 정보 찾기
-                String targetChampion = matchDetail.getInfo().getParticipants().stream()
+                // 타겟 플레이어의 정보 찾기 (챔피언 + 플레이어명)
+                matchDetail.getInfo().getParticipants().stream()
                         .filter(p -> p.getPuuid().equals(puuid))
                         .findFirst()
-                        .map(p -> p.getChampionName())
-                        .orElse(null);
-                analysis.setTargetChampion(targetChampion);
+                        .ifPresent(participant -> {
+                            // 챔피언 정보 설정
+                            analysis.setTargetChampion(participant.getChampionName());
+                            
+                            // 실제 플레이어명으로 업데이트 (Riot ID 형식)
+                            String realPlayerName = participant.getRiotIdGameName() + "#" + participant.getRiotIdTagline();
+                            analysis.setTargetPlayerName(realPlayerName);
+                            logger.info("Updated player name from Temporary to: {}", realPlayerName);
+                        });
             }
             
             // AI 분석 수행
