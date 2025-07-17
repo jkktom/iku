@@ -30,4 +30,6 @@ public interface DuoMatchAnalysisRepository extends JpaRepository<DuoMatchAnalys
 
     List<DuoMatchAnalysis> findByPlayer1PuuidAndPlayer2PuuidOrPlayer1PuuidAndPlayer2PuuidOrderByCreatedAtDesc(
             String player1Puuid1, String player2Puuid1, String player1Puuid2, String player2Puuid2);
+
+
 }

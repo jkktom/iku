@@ -54,6 +54,8 @@ public class DuoMatchAnalysis {
     private LocalDateTime updatedAt;
 
     public DuoMatchAnalysis() {
+        this.createdAt = LocalDateTime.now();
+        this.analysisStatus = AnalysisStatus.REQUESTED;
     }
 
     public DuoMatchAnalysis(Long id, String matchId, String player1Puuid, String player2Puuid, String player1Name, String player2Name, String player1Champion, String player2Champion, Map<String, Object> comparisonResult, String analysisSummary, AnalysisStatus analysisStatus, LocalDateTime createdAt, LocalDateTime updatedAt) {
@@ -149,7 +151,9 @@ public class DuoMatchAnalysis {
     }
 
     public void setAnalysisSummary(String analysisSummary) {
+
         this.analysisSummary = analysisSummary;
+        this.updatedAt = LocalDateTime.now();
     }
 
     public AnalysisStatus getAnalysisStatus() {
@@ -158,6 +162,7 @@ public class DuoMatchAnalysis {
 
     public void setAnalysisStatus(AnalysisStatus analysisStatus) {
         this.analysisStatus = analysisStatus;
+        this.updatedAt = LocalDateTime.now();
     }
 
     public LocalDateTime getCreatedAt() {

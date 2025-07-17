@@ -83,6 +83,13 @@ public class DuoMatchAnalysisService {
         logger.info("Performing duo analysis for match: {} with players: {}#{} vs {}#{}",
                 matchId, player1Name, player1Tag, player2Name, player2Tag);
 
+        System.out.println("=== 입력값 확인 ===");
+        System.out.println("player1Name: " + player1Name);
+        System.out.println("player1Tag: " + player1Tag);
+        System.out.println("player2Name: " + player2Name);
+        System.out.println("player2Tag: " + player2Tag);
+        System.out.println("matchId: " + matchId);
+
         try{
             // 1. 플레이어 계정 정보 조회
             AccountDto player1Account = riotService.getAccountInfo(player1Name,player1Tag);
@@ -91,6 +98,12 @@ public class DuoMatchAnalysisService {
             // 2. 중복 분석 방지
             Optional<DuoMatchAnalysis> existingAnalysis = duoMatchAnalysisRepository
                     .findByMatchIdAndPlayer1PuuidAndPlayer2Puuid(matchId, player1Account.getPuuid(),player2Account.getPuuid());
+
+            // 순서가 바뀐 경우도 확인
+            if (!existingAnalysis.isPresent()) {
+                existingAnalysis = duoMatchAnalysisRepository
+                        .findByMatchIdAndPlayer1PuuidAndPlayer2Puuid(matchId, player2Account.getPuuid(), player1Account.getPuuid());
+            }
 
             if(existingAnalysis.isPresent()&&
             existingAnalysis.get().getAnalysisStatus() == AnalysisStatus.COMPLETED){
@@ -104,9 +117,14 @@ public class DuoMatchAnalysisService {
                 newAnalysis.setMatchId(matchId);
                 newAnalysis.setPlayer1Puuid(player1Account.getPuuid());
                 newAnalysis.setPlayer2Puuid(player2Account.getPuuid());
-                newAnalysis.setPlayer1Name(player1Name + "#" + player1Tag);
-                newAnalysis.setPlayer1Name(player2Name + "#" + player2Tag);
+
+                newAnalysis.setPlayer1Name(player1Name + " #" + player1Tag);
+                newAnalysis.setPlayer2Name(player2Name + " #" + player2Tag);
                 newAnalysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
+
+                logger.info("새 분석 생성: Player1={}, Player2={}",
+                        newAnalysis.getPlayer1Name(), newAnalysis.getPlayer2Name());
+
                 return newAnalysis;
             });
 
@@ -122,8 +140,16 @@ public class DuoMatchAnalysisService {
             Map<String, Object> player2Data = extractPlayerDataFromMatch(matchDetail, player2Account.getPuuid());
 
             // 7. 챔피언 정보 설정
-            analysis.setPlayer1Champion((String) player1Data.get("championName"));
-            analysis.setPlayer2Champion((String) player2Data.get("championName"));
+            String player1Champion = (String) player1Data.get("championName");
+            String player2Champion = (String) player2Data.get("championName");
+
+            analysis.setPlayer1Champion(player1Champion);
+            analysis.setPlayer2Champion(player2Champion);
+
+            logger.info("챔피언 정보: Player1={} ({}), Player2={} ({})",
+                    analysis.getPlayer1Name(), player1Champion,
+                    analysis.getPlayer2Name(), player2Champion);
+
 
             // 8. 성과 비교 분석
             Map<String, Object> comparisonResult = performComparison(player1Data,player2Data);
@@ -140,8 +166,12 @@ public class DuoMatchAnalysisService {
 
             DuoMatchAnalysis savedAnalysis = duoMatchAnalysisRepository.save(analysis);
 
-            logger.info("Duo analysis completed successfully for match: {}", matchId);
+            logger.info("분석 완료: Player1={}, Player2={}, Champion1={}, Champion2={}",
+                    savedAnalysis.getPlayer1Name(), savedAnalysis.getPlayer2Name(),
+                    savedAnalysis.getPlayer1Champion(), savedAnalysis.getPlayer2Champion());
+
             return buildResponseData(savedAnalysis);
+
         }catch (Exception e){
             logger.error("Duo analysis failed for match: {}", matchId, e);
             throw new RuntimeException("듀오 분석 실패: "+e.getMessage());
@@ -288,6 +318,12 @@ public class DuoMatchAnalysisService {
      **/
     private Map<String, Object> buildResponseData(DuoMatchAnalysis analysis) {
         Map<String, Object> response = new HashMap<>();
+
+        logger.info("응답 구성: Player1={}, Player2={}, Champion1={}, Champion2={}",
+                analysis.getPlayer1Name(), analysis.getPlayer2Name(),
+                analysis.getPlayer1Champion(), analysis.getPlayer2Champion());
+
+        Map<String,Object> analysisRecord = new HashMap<>();
         response.put("id", analysis.getId());
         response.put("matchId", analysis.getMatchId());
         response.put("player1Name", analysis.getPlayer1Name());
@@ -299,6 +335,9 @@ public class DuoMatchAnalysisService {
         response.put("comparisonResult", analysis.getComparisonResult());
         response.put("updatedAt", analysis.getUpdatedAt());
         response.put("createdAt", analysis.getCreatedAt());
+
+        response.put("analysisRecord", analysisRecord);
+        response.put("message", "듀오 분석 완료");
 
         return response;
     }
@@ -341,7 +380,6 @@ public class DuoMatchAnalysisService {
             return false;
         }
     }
-
 
     /**
      * 매치 ID로 분석 조회
@@ -409,6 +447,13 @@ public class DuoMatchAnalysisService {
      */
     public List<DuoMatchAnalysis> getFailedAnalysis() {
         return duoMatchAnalysisRepository.findByAnalysisStatusOrderByUpdatedAtDesc(AnalysisStatus.FAILED);
+    }
+
+    /**
+     * 상태별 듀오 분석 개수 조회
+     */
+    public long countByAnalysisStatus(AnalysisStatus status) {
+        return duoMatchAnalysisRepository.countByAnalysisStatus(status);
     }
 
 }

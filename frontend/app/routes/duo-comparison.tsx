@@ -1,5 +1,6 @@
 // app/routes/duo-comparison.tsx
 import { useState } from 'react'
+import ReactMarkdown from "react-markdown";
 
 interface Player {
     name: string
@@ -224,7 +225,7 @@ export default function DuoComparisonPage() {
                             <div className={`flex items-center justify-center w-8 h-8 rounded-full mr-3 ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
                                 2
                             </div>
-                            <h2 className="text-xl font-semibold">매치 선택</h2>
+                            <h2 className="text-xl font-semibold">매치 선택 (최신순)</h2>
                         </div>
 
                         {step === 2 && (
@@ -309,21 +310,14 @@ export default function DuoComparisonPage() {
 
                             <div>
                                 <h3 className="font-semibold mb-2">AI 분석 결과</h3>
-                                <div className="bg-gray-50 rounded-lg p-4 text-sm whitespace-pre-wrap">
-                                    {analysisResult.analysisRecord.analysisSummary || '분석 결과가 없습니다.'}
-                                </div>
-                            </div>
-
-                            {analysisResult.analysisRecord.comparisonResult && (
-                                <div>
-                                    <h3 className="font-semibold mb-2">비교 분석 상세</h3>
-                                    <div className="bg-blue-50 rounded-lg p-4 text-sm">
-                                        <pre className="whitespace-pre-wrap">
-                                            {JSON.stringify(analysisResult.analysisRecord.comparisonResult, null, 2)}
-                                        </pre>
+                                <div className="bg-white rounded-lg p-4 border">
+                                    <div className="prose prose-sm max-w-none">
+                                        <ReactMarkdown>
+                                            {analysisResult.analysisRecord.analysisSummary || '분석 결과가 없습니다.'}
+                                        </ReactMarkdown>
                                     </div>
                                 </div>
-                            )}
+                            </div>
 
                             <div className="flex gap-2 pt-4">
                                 <button

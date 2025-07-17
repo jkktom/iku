@@ -383,6 +383,7 @@ public class AnalysisControllerV2 {
             @RequestParam String player2Tag,
             @RequestParam String matchId) {
         try {
+
             Map<String, Object> response = duoMatchAnalysisService.compareDuoPlayersAndGetResponse(
                     player1Name, player1Tag, player2Name, player2Tag, matchId);
 
@@ -412,12 +413,42 @@ public class AnalysisControllerV2 {
      * 듀오 분석 상태별 조회
      */
     @GetMapping("/duo/status/{status}")
-    public ResponseEntity<List<DuoMatchAnalysis>> getDuoAnalysisByStatus(
+    public ResponseEntity<Map<String, Object>> getDuoAnalysisByStatus(
             @PathVariable AnalysisStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        List<DuoMatchAnalysis> analyses = duoMatchAnalysisService.getAnalysisByStatusWithPaging(status, page, size);
-        return ResponseEntity.ok(analyses);
+        try {
+            //입력값 유효성 검사
+            if (page < 0) {
+                throw new IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.");
+            }
+            if (size < 0 || size > 100) {
+                throw new IllegalArgumentException("페이지 크기는 1-100 사이여야 합니다.");
+            }
+            // 페이징된 데이터 조회
+            List<DuoMatchAnalysis> analyses = duoMatchAnalysisService.getAnalysisByStatusWithPaging(status, page, size);
+            long totalCount = duoMatchAnalysisService.countByAnalysisStatus(status);
+
+            // 일관된 응답 구조
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", analyses);
+            response.put("totalElements", totalCount);
+            response.put("totalPages", (int) Math.ceil((double) totalCount / size));
+            response.put("currentPage", page);
+            response.put("pageSize", size);
+            response.put("message", "듀오 분석 기록 조회 완료");
+
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "듀오 분석 기록 조회 중 오류가 발생했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 
     /**
