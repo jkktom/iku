@@ -149,6 +149,25 @@ services:
     restart: unless-stopped
 
   # ======================
+  # Nginx 리버스 프록시
+  # ======================
+  nginx:
+    image: nginx:alpine
+    container_name: iku-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - frontend-main
+      - backend-main
+    networks:
+      - iku-main-network
+    restart: unless-stopped
+
+  # ======================
   # 개발용 추가 서비스들 (선택사항)
   # ======================
   adminer:
