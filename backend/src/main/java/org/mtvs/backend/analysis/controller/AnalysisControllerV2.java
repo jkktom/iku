@@ -1,7 +1,10 @@
 package org.mtvs.backend.analysis.controller;
 
+import org.mtvs.backend.analysis.entity.AnalysisStatus;
+import org.mtvs.backend.analysis.entity.DuoMatchAnalysis;
 import org.mtvs.backend.analysis.entity.MultipleMatchAnalysis;
 import org.mtvs.backend.analysis.entity.SingleMatchAnalysis;
+import org.mtvs.backend.analysis.service.DuoMatchAnalysisService;
 import org.mtvs.backend.analysis.service.MultipleMatchAnalysisService;
 import org.mtvs.backend.analysis.service.SingleMatchAnalysisService;
 import org.mtvs.backend.riot.dto.AccountDto;
@@ -21,11 +24,14 @@ public class AnalysisControllerV2 {
 
     private final SingleMatchAnalysisService singleMatchAnalysisService;
     private final MultipleMatchAnalysisService multipleMatchAnalysisService;
+    private final DuoMatchAnalysisService duoMatchAnalysisService;
 
     public AnalysisControllerV2(SingleMatchAnalysisService singleMatchAnalysisService,
-                                MultipleMatchAnalysisService multipleMatchAnalysisService) {
+                                MultipleMatchAnalysisService multipleMatchAnalysisService,
+                                DuoMatchAnalysisService duoMatchAnalysisService) {
         this.singleMatchAnalysisService = singleMatchAnalysisService;
         this.multipleMatchAnalysisService = multipleMatchAnalysisService;
+        this.duoMatchAnalysisService = duoMatchAnalysisService;
     }
 
     /**
@@ -181,10 +187,10 @@ public class AnalysisControllerV2 {
 
         try {
             List<SingleMatchAnalysis> singleAnalyses = singleMatchAnalysisService.getAnalysisByStatusWithPaging(
-                    SingleMatchAnalysis.AnalysisStatus.COMPLETED, page, size);
+                    AnalysisStatus.COMPLETED, page, size);
 
             List<MultipleMatchAnalysis> multipleAnalyses = multipleMatchAnalysisService.getAnalysisByStatusWithPaging(
-                    MultipleMatchAnalysis.AnalysisStatus.COMPLETED, page, size);
+                    AnalysisStatus.COMPLETED, page, size);
 
             // 통합 응답 데이터 구성
             List<Map<String, Object>> combinedResults = new ArrayList<>();
@@ -338,5 +344,104 @@ public class AnalysisControllerV2 {
         result.put("multipleAnalysis", multipleMatchAnalysisService.getFailedAnalysis());
         return ResponseEntity.ok(result);
     }
+
+    /**
+     * 공통 매치 찾기
+     */
+    @GetMapping("/duo/common-matches")
+    public ResponseEntity<Map<String, Object>> findCommonMatches(
+            @RequestParam String player1Name,
+            @RequestParam String player1Tag,
+            @RequestParam String player2Name,
+            @RequestParam String player2Tag) {
+        try {
+            List<String> commonMatches = duoMatchAnalysisService.findCommonMatches(
+                    player1Name, player1Tag, player2Name, player2Tag);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("commonMatches", commonMatches);
+            response.put("count", commonMatches.size());
+            response.put("message", "공통 매치 " + commonMatches.size() + "개 발견");
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
+    /**
+     * 듀오 비교 분석 수행
+     */
+    @PostMapping("/duo/analyze")
+    public ResponseEntity<Map<String, Object>> performDuoAnalysis(
+            @RequestParam String player1Name,
+            @RequestParam String player1Tag,
+            @RequestParam String player2Name,
+            @RequestParam String player2Tag,
+            @RequestParam String matchId) {
+        try {
+            Map<String, Object> response = duoMatchAnalysisService.compareDuoPlayersAndGetResponse(
+                    player1Name, player1Tag, player2Name, player2Tag, matchId);
+
+            Map<String, Object> finalResponse = new HashMap<>();
+            finalResponse.put("analysisRecord", response);
+            finalResponse.put("message", "듀오 비교 분석이 완료되었습니다.");
+
+            return ResponseEntity.ok(finalResponse);
+
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
+    /**
+     * 매치 ID로 듀오 분석 조회
+     */
+    @GetMapping("/duo/match/{matchId}")
+    public ResponseEntity<List<DuoMatchAnalysis>> getDuoAnalysisByMatchId(@PathVariable String matchId) {
+        List<DuoMatchAnalysis> analyses = duoMatchAnalysisService.getAnalysisByMatchId(matchId);
+        return ResponseEntity.ok(analyses);
+    }
+
+    /**
+     * 듀오 분석 상태별 조회
+     */
+    @GetMapping("/duo/status/{status}")
+    public ResponseEntity<List<DuoMatchAnalysis>> getDuoAnalysisByStatus(
+            @PathVariable AnalysisStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        List<DuoMatchAnalysis> analyses = duoMatchAnalysisService.getAnalysisByStatusWithPaging(status, page, size);
+        return ResponseEntity.ok(analyses);
+    }
+
+    /**
+     * 듀오 분석 통계
+     */
+    @GetMapping("/duo/stats")
+    public ResponseEntity<Map<String, Object>> getDuoAnalysisStats() {
+        try {
+            long totalCount = duoMatchAnalysisService.getTotalCount();
+            long completedCount = duoMatchAnalysisService.getCompletedCount();
+
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("totalCount", totalCount);
+            stats.put("completedCount", completedCount);
+            stats.put("pendingCount", totalCount - completedCount);
+
+            return ResponseEntity.ok(stats);
+
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
 }
 

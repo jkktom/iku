@@ -1,5 +1,6 @@
 package org.mtvs.backend.analysis.repository;
 
+import org.mtvs.backend.analysis.entity.AnalysisStatus;
 import org.mtvs.backend.analysis.entity.MultipleMatchAnalysis;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,38 +24,38 @@ public interface MultipleMatchAnalysisRepository extends JpaRepository<MultipleM
      * 분석 상태별 조회 (페이징)
      */
     Page<MultipleMatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(
-            MultipleMatchAnalysis.AnalysisStatus status, Pageable pageable);
+            AnalysisStatus status, Pageable pageable);
     
     /**
      * 분석 상태별 조회 (리스트)
      */
     List<MultipleMatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(
-            MultipleMatchAnalysis.AnalysisStatus status);
+            AnalysisStatus status);
     
     /**
      * 완료된 분석 개수 조회
      */
     @Query("SELECT COUNT(m) FROM MultipleMatchAnalysis m WHERE m.analysisStatus = :status")
-    long countByAnalysisStatus(@Param("status") MultipleMatchAnalysis.AnalysisStatus status);
+    long countByAnalysisStatus(@Param("status") AnalysisStatus status);
     
     /**
      * 특정 사용자의 완료된 분석 개수 조회
      */
     @Query("SELECT COUNT(m) FROM MultipleMatchAnalysis m WHERE m.puuid = :puuid AND m.analysisStatus = :status")
     long countByPuuidAndAnalysisStatus(@Param("puuid") String puuid, 
-                                      @Param("status") MultipleMatchAnalysis.AnalysisStatus status);
+                                      @Param("status") AnalysisStatus status);
     
     /**
      * 처리 대기 중인 분석 조회
      */
     List<MultipleMatchAnalysis> findByAnalysisStatusInOrderByCreatedAtAsc(
-            List<MultipleMatchAnalysis.AnalysisStatus> statuses);
+            List<AnalysisStatus> statuses);
     
     /**
      * 실패한 분석 조회
      */
     List<MultipleMatchAnalysis> findByAnalysisStatusOrderByUpdatedAtDesc(
-            MultipleMatchAnalysis.AnalysisStatus status);
+            AnalysisStatus status);
     
     /**
      * 특정 사용자의 최근 분석 조회 (제한된 개수)
@@ -88,6 +89,6 @@ public interface MultipleMatchAnalysisRepository extends JpaRepository<MultipleM
      */
     @Query("SELECT m FROM MultipleMatchAnalysis m WHERE m.puuid = :puuid AND m.analysisStatus = :status ORDER BY m.createdAt DESC")
     List<MultipleMatchAnalysis> findRecentAnalysisByPuuidAndStatus(@Param("puuid") String puuid, 
-                                                                  @Param("status") MultipleMatchAnalysis.AnalysisStatus status, 
+                                                                  @Param("status") AnalysisStatus status,
                                                                   Pageable pageable);
 }

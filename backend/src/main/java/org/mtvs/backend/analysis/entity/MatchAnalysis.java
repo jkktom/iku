@@ -51,14 +51,6 @@ public class MatchAnalysis {
     @Column(name = "error_message", columnDefinition = "text")
     private String errorMessage;
 
-    // 분석 상태 열거형
-    public enum AnalysisStatus {
-        REQUESTED,    // 분석 요청됨
-        PROCESSING,   // 분석 중
-        COMPLETED,    // 분석 완료
-        FAILED        // 분석 실패
-    }
-
     // 기본 생성자
     public MatchAnalysis() {
         this.createdAt = LocalDateTime.now();

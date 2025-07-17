@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.mtvs.backend.analysis.entity.AnalysisStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,14 +29,14 @@ public interface MatchAnalysisRepository extends JpaRepository<MatchAnalysis, Lo
     List<MatchAnalysis> findByPuuidAndMatchIdIsNotNullOrderByCreatedAtDesc(String puuid);
     
     // 분석 상태별 조회
-    List<MatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(MatchAnalysis.AnalysisStatus status);
+    List<MatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(AnalysisStatus status);
     
     // 분석 상태별 조회 (페이징)
-    List<MatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(MatchAnalysis.AnalysisStatus status, org.springframework.data.domain.Pageable pageable);
+    List<MatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(AnalysisStatus status, org.springframework.data.domain.Pageable pageable);
 
     // 특정 유저의 특정 상태 분석들 조회
     List<MatchAnalysis> findByPuuidAndAnalysisStatusOrderByCreatedAtDesc(
-        String puuid, MatchAnalysis.AnalysisStatus status);
+        String puuid, AnalysisStatus status);
     
     // 특정 챔피언의 분석 결과 조회
     List<MatchAnalysis> findByTargetChampionOrderByCreatedAtDesc(String championName);
@@ -56,5 +57,5 @@ public interface MatchAnalysisRepository extends JpaRepository<MatchAnalysis, Lo
     boolean existsByPuuidAndMatchId(String puuid, String matchId);
 
     // 상태별 카운트
-    long countByAnalysisStatus(MatchAnalysis.AnalysisStatus status);
+    long countByAnalysisStatus(AnalysisStatus status);
 }

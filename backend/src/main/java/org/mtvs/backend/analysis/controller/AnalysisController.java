@@ -1,5 +1,6 @@
 package org.mtvs.backend.analysis.controller;
 
+import org.mtvs.backend.analysis.entity.AnalysisStatus;
 import org.mtvs.backend.analysis.entity.MatchAnalysis;
 import org.mtvs.backend.analysis.service.MatchAnalysisService;
 import org.mtvs.backend.riot.dto.AccountDto;
@@ -164,7 +165,7 @@ public class AnalysisController {
      */
     @GetMapping("/status/{status}")
     public ResponseEntity<List<MatchAnalysis>> getAnalysisByStatus(
-            @PathVariable MatchAnalysis.AnalysisStatus status,
+            @PathVariable AnalysisStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         List<MatchAnalysis> analyses = matchAnalysisService.getAnalysisByStatusWithPaging(status, page, size);

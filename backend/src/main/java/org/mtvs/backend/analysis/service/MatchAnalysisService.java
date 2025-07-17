@@ -1,6 +1,7 @@
 package org.mtvs.backend.analysis.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.mtvs.backend.analysis.entity.AnalysisStatus;
 import org.mtvs.backend.gemini.service.GameAnalysisService;
 import org.mtvs.backend.gemini.service.GeminiService;
 import org.mtvs.backend.analysis.repository.MatchAnalysisRepository;
@@ -217,7 +218,7 @@ public class MatchAnalysisService {
         MatchAnalysis analysis = new MatchAnalysis();
         analysis.setPuuid(account.getPuuid());
         analysis.setTargetPlayerName(account.getGameName());
-        analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
+        analysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
         // matchId는 의도적으로 null로 설정 (2단계에서 설정됨)
 
         //RiotUser 엔티티 저장
@@ -267,7 +268,7 @@ public class MatchAnalysisService {
             MatchAnalysis newRecord = new MatchAnalysis();
             newRecord.setPuuid(puuid);
             newRecord.setMatchId(matchId);
-            newRecord.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
+            newRecord.setAnalysisStatus(AnalysisStatus.REQUESTED);
             
             Map<String, Object> data = new HashMap<>();
             data.put("step", "MATCH_LOOKUP");
@@ -350,7 +351,7 @@ public class MatchAnalysisService {
         MatchAnalysis analysis = new MatchAnalysis();
         analysis.setPuuid(puuid);
         analysis.setTargetPlayerName(gameName);
-        analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
+        analysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
         // matchId는 null로 설정 (다중 매치이므로)
         
         // 요청 데이터 구성
@@ -368,7 +369,7 @@ public class MatchAnalysisService {
             logger.info("다중 분석 레코드 생성 완료: ID={}", analysis.getId());
             
             // 상태를 PROCESSING으로 변경
-            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.PROCESSING);
+            analysis.setAnalysisStatus(AnalysisStatus.PROCESSING);
             matchAnalysisRepository.save(analysis);
             
             // GameAnalysisService를 통한 다중 매치 분석
@@ -389,7 +390,7 @@ public class MatchAnalysisService {
             // 결과 저장
             analysis.setAiResponseData(responseData);
             analysis.setAnalysisSummary(aiAnalysisResult);
-            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.COMPLETED);
+            analysis.setAnalysisStatus(AnalysisStatus.COMPLETED);
             
             // 요청 데이터에 분석 완료 표시 추가
             requestData.put("multipleAnalysisCompleted", true);
@@ -401,7 +402,7 @@ public class MatchAnalysisService {
             
         } catch (Exception e) {
             logger.error("다중 매치 AI 분석 실패: ", e);
-            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.FAILED);
+            analysis.setAnalysisStatus(AnalysisStatus.FAILED);
             analysis.setErrorMessage("다중 매치 AI 분석 실패: " + e.getMessage());
             matchAnalysisRepository.save(analysis);
             throw new RuntimeException("다중 매치 AI 분석 실패", e);
@@ -430,7 +431,7 @@ public class MatchAnalysisService {
         Optional<MatchAnalysis> existingOpt = matchAnalysisRepository.findByPuuidAndMatchId(puuid, matchId);
         if (existingOpt.isPresent()) {
             MatchAnalysis existing = existingOpt.get();
-            if (existing.getAnalysisStatus() == MatchAnalysis.AnalysisStatus.COMPLETED) {
+            if (existing.getAnalysisStatus() == AnalysisStatus.COMPLETED) {
                 logger.info("이미 완료된 분석이 존재함: ID={}", existing.getId());
                 return existing;
             }
@@ -441,7 +442,7 @@ public class MatchAnalysisService {
         
         try {
             // 상태를 PROCESSING으로 변경
-            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.PROCESSING);
+            analysis.setAnalysisStatus(AnalysisStatus.PROCESSING);
             matchAnalysisRepository.save(analysis);
             
             // AI 분석 수행
@@ -454,7 +455,7 @@ public class MatchAnalysisService {
             
         } catch (Exception e) {
             logger.error("AI 분석 실패: ", e);
-            analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.FAILED);
+            analysis.setAnalysisStatus(AnalysisStatus.FAILED);
             analysis.setErrorMessage("AI 분석 실패: " + e.getMessage());
             matchAnalysisRepository.save(analysis);
             throw new RuntimeException("AI 분석 실패", e);
@@ -488,7 +489,7 @@ public class MatchAnalysisService {
         MatchAnalysis analysis = new MatchAnalysis();
         analysis.setPuuid(puuid);
         analysis.setMatchId(matchId);
-        analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.REQUESTED);
+        analysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
         
         Map<String, Object> data = new HashMap<>();
         data.put("step", "AI_ANALYSIS_DIRECT");
@@ -887,7 +888,7 @@ public class MatchAnalysisService {
         // 결과 저장
         analysis.setAiResponseData(responseData);
         analysis.setAnalysisSummary(aiAnalysisResult);
-        analysis.setAnalysisStatus(MatchAnalysis.AnalysisStatus.COMPLETED);
+        analysis.setAnalysisStatus(AnalysisStatus.COMPLETED);
         
         // 요청 데이터에 분석 완료 표시 추가
         Map<String, Object> requestData = analysis.getAiRequestData();
@@ -991,12 +992,12 @@ public class MatchAnalysisService {
     }
 
     @Transactional(readOnly = true)
-    public List<MatchAnalysis> getAnalysisByStatus(MatchAnalysis.AnalysisStatus status) {
+    public List<MatchAnalysis> getAnalysisByStatus(AnalysisStatus status) {
         return matchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status);
     }
 
     @Transactional(readOnly = true)
-    public List<MatchAnalysis> getAnalysisByStatusWithPaging(MatchAnalysis.AnalysisStatus status, int page, int size) {
+    public List<MatchAnalysis> getAnalysisByStatusWithPaging(AnalysisStatus status, int page, int size) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
         return matchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status, pageable);
     }
@@ -1023,7 +1024,7 @@ public class MatchAnalysisService {
 
     @Transactional(readOnly = true)
     public long getCompletedCount() {
-        return matchAnalysisRepository.countByAnalysisStatus(MatchAnalysis.AnalysisStatus.COMPLETED);
+        return matchAnalysisRepository.countByAnalysisStatus(AnalysisStatus.COMPLETED);
     }
 
     /**
