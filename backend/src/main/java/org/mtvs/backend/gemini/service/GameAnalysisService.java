@@ -1,5 +1,6 @@
 package org.mtvs.backend.gemini.service;
 
+import org.mtvs.backend.gemini.prompt.DuoAnalysisPrompt;
 import org.mtvs.backend.riot.dto.*;
 import org.mtvs.backend.riot.service.RiotService;
 import org.springframework.stereotype.Service;
@@ -14,10 +15,12 @@ public class GameAnalysisService {
     
     private final RiotService riotService;
     private final GeminiService geminiService;
+    private final DuoAnalysisPrompt duoAnalysisPrompt;
     
-    public GameAnalysisService(RiotService riotService, GeminiService geminiService) {
+    public GameAnalysisService(RiotService riotService, GeminiService geminiService,DuoAnalysisPrompt duoAnalysisPrompt) {
         this.riotService = riotService;
         this.geminiService = geminiService;
+        this.duoAnalysisPrompt = duoAnalysisPrompt;
     }
     
     /**
@@ -831,17 +834,17 @@ public class GameAnalysisService {
             return "river";
         }
         
-        // 상단 (탑 레인)
+        // 상단 (탑 라인)
         if (y > 10000) {
             return "topLane";
         }
         
-        // 하단 (봇 레인)  
+        // 하단 (봇 라인)
         if (y < 5000) {
             return "botLane";
         }
         
-        // 중앙 (미드 레인)
+        // 중앙 (미드 라인)
         if (x >= 6000 && x <= 9000 && y >= 5000 && y <= 10000) {
             return "midLane";
         }
@@ -989,4 +992,43 @@ public class GameAnalysisService {
         double riskScore = ((highRiskTime * 3.0 + mediumRiskTime * 1.0) / totalTime) * 100;
         return (int) Math.min(100, Math.max(0, riskScore));
     }
+
+    /* 듀오 매치 비교 분석 수행 */
+    public String analyzeDuoMatch(String player1Name, String player1Tag,
+                                  String player2Name, String player2Tag,
+                                  String matchId) {
+        try {
+            System.out.println("=== 듀오 매치 비교 분석 시작 ===");
+            // 1. 계정 정보 조회
+            AccountDto player1Account = riotService.getAccountInfo(player1Name, player1Tag);
+            AccountDto player2Account = riotService.getAccountInfo(player2Name, player2Tag);
+
+            // 2. 매치 데이터 조회
+            MatchDetailDto matchDetail = riotService.getMatchDetail(matchId);
+            MatchTimelineDto matchTimeline = riotService.getMatchTimeline(matchId);
+
+            // 3. 플레이어 데이터 추출
+            Map<String, Object> player1Data = extractPlayerData(matchDetail, matchTimeline, player1Account.getPuuid());
+            Map<String, Object> player2Data = extractPlayerData(matchDetail, matchTimeline, player2Account.getPuuid());
+
+            // 4. 듀오 프롬프트 생성 (컴포넌트 사용)
+            String analysisPrompt = duoAnalysisPrompt.createPrompt(
+                    player1Data, player2Data,
+                    player1Name, player1Tag,
+                    player2Name, player2Tag,
+                    matchId
+            );
+
+            // 5. AI 분석 요청
+            String feedback = geminiService.sendMessage(analysisPrompt);
+
+            System.out.println("=== 듀오 매치 비교 분석 완료 ===");
+            return feedback;
+
+        } catch (Exception e) {
+            System.err.println("듀오 매치 분석 중 오류: " + e.getMessage());
+            return "듀오 분석 중 오류가 발생했습니다: " + e.getMessage();
+        }
+    }
+
 }

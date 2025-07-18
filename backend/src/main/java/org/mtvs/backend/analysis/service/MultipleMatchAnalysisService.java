@@ -1,6 +1,7 @@
 package org.mtvs.backend.analysis.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.mtvs.backend.analysis.entity.AnalysisStatus;
 import org.mtvs.backend.analysis.entity.MultipleMatchAnalysis;
 import org.mtvs.backend.analysis.repository.MultipleMatchAnalysisRepository;
 import org.mtvs.backend.gemini.service.GameAnalysisService;
@@ -67,7 +68,7 @@ public class MultipleMatchAnalysisService {
             analysis.setAnalyzedMatchIds(selectedMatchIds);
             analysis.setAnalysisPeriod("최근 " + matchCount + "게임");
             analysis.setTotalGamesFound(matchIds.size());
-            analysis.setAnalysisStatus(MultipleMatchAnalysis.AnalysisStatus.PROCESSING);
+            analysis.setAnalysisStatus(AnalysisStatus.PROCESSING);
             
             // 플레이어 이름 설정 (첫 번째 매치에서 가져오기)
             if (!selectedMatchIds.isEmpty()) {
@@ -135,7 +136,7 @@ public class MultipleMatchAnalysisService {
             
             savedAnalysis.setAiResponseData(aiResponseData);
             savedAnalysis.setAnalysisSummary(aiResponse);
-            savedAnalysis.setAnalysisStatus(MultipleMatchAnalysis.AnalysisStatus.COMPLETED);
+            savedAnalysis.setAnalysisStatus(AnalysisStatus.COMPLETED);
             
             MultipleMatchAnalysis finalAnalysis = multipleMatchAnalysisRepository.save(savedAnalysis);
             
@@ -147,7 +148,7 @@ public class MultipleMatchAnalysisService {
             MultipleMatchAnalysis failedAnalysis = new MultipleMatchAnalysis();
             failedAnalysis.setPuuid(puuid);
             failedAnalysis.setMatchCount(matchCount);
-            failedAnalysis.setAnalysisStatus(MultipleMatchAnalysis.AnalysisStatus.FAILED);
+            failedAnalysis.setAnalysisStatus(AnalysisStatus.FAILED);
             failedAnalysis.setErrorMessage(e.getMessage());
             multipleMatchAnalysisRepository.save(failedAnalysis);
             throw e;
@@ -218,11 +219,11 @@ public class MultipleMatchAnalysisService {
         return multipleMatchAnalysisRepository.findByPuuidOrderByCreatedAtDesc(puuid);
     }
 
-    public List<MultipleMatchAnalysis> getAnalysisByStatus(MultipleMatchAnalysis.AnalysisStatus status) {
+    public List<MultipleMatchAnalysis> getAnalysisByStatus(AnalysisStatus status) {
         return multipleMatchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status);
     }
 
-    public List<MultipleMatchAnalysis> getAnalysisByStatusWithPaging(MultipleMatchAnalysis.AnalysisStatus status, int page, int size) {
+    public List<MultipleMatchAnalysis> getAnalysisByStatusWithPaging(AnalysisStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return multipleMatchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status, pageable).getContent();
     }
@@ -232,16 +233,16 @@ public class MultipleMatchAnalysisService {
     }
 
     public long getCompletedCount() {
-        return multipleMatchAnalysisRepository.countByAnalysisStatus(MultipleMatchAnalysis.AnalysisStatus.COMPLETED);
+        return multipleMatchAnalysisRepository.countByAnalysisStatus(AnalysisStatus.COMPLETED);
     }
 
     public List<MultipleMatchAnalysis> getPendingAnalysis() {
         return multipleMatchAnalysisRepository.findByAnalysisStatusInOrderByCreatedAtAsc(
-                Arrays.asList(MultipleMatchAnalysis.AnalysisStatus.REQUESTED, MultipleMatchAnalysis.AnalysisStatus.PROCESSING));
+                Arrays.asList(AnalysisStatus.REQUESTED, AnalysisStatus.PROCESSING));
     }
 
     public List<MultipleMatchAnalysis> getFailedAnalysis() {
-        return multipleMatchAnalysisRepository.findByAnalysisStatusOrderByUpdatedAtDesc(MultipleMatchAnalysis.AnalysisStatus.FAILED);
+        return multipleMatchAnalysisRepository.findByAnalysisStatusOrderByUpdatedAtDesc(AnalysisStatus.FAILED);
     }
 
     public List<MultipleMatchAnalysis> getAnalysisByMatchId(String matchId) {

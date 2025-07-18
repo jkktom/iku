@@ -1,5 +1,6 @@
 package org.mtvs.backend.analysis.repository;
 
+import org.mtvs.backend.analysis.entity.AnalysisStatus;
 import org.mtvs.backend.analysis.entity.SingleMatchAnalysis;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,13 +29,13 @@ public interface SingleMatchAnalysisRepository extends JpaRepository<SingleMatch
      * 분석 상태별 조회 (페이징)
      */
     Page<SingleMatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(
-            SingleMatchAnalysis.AnalysisStatus status, Pageable pageable);
+            AnalysisStatus status, Pageable pageable);
     
     /**
      * 분석 상태별 조회 (리스트)
      */
     List<SingleMatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(
-            SingleMatchAnalysis.AnalysisStatus status);
+            AnalysisStatus status);
     
     /**
      * 특정 매치 ID로 모든 분석 조회
@@ -45,26 +46,26 @@ public interface SingleMatchAnalysisRepository extends JpaRepository<SingleMatch
      * 완료된 분석 개수 조회
      */
     @Query("SELECT COUNT(s) FROM SingleMatchAnalysis s WHERE s.analysisStatus = :status")
-    long countByAnalysisStatus(@Param("status") SingleMatchAnalysis.AnalysisStatus status);
+    long countByAnalysisStatus(@Param("status") AnalysisStatus status);
     
     /**
      * 특정 사용자의 완료된 분석 개수 조회
      */
     @Query("SELECT COUNT(s) FROM SingleMatchAnalysis s WHERE s.puuid = :puuid AND s.analysisStatus = :status")
     long countByPuuidAndAnalysisStatus(@Param("puuid") String puuid, 
-                                      @Param("status") SingleMatchAnalysis.AnalysisStatus status);
+                                      @Param("status") AnalysisStatus status);
     
     /**
      * 처리 대기 중인 분석 조회
      */
     List<SingleMatchAnalysis> findByAnalysisStatusInOrderByCreatedAtAsc(
-            List<SingleMatchAnalysis.AnalysisStatus> statuses);
+            List<AnalysisStatus> statuses);
     
     /**
      * 실패한 분석 조회
      */
     List<SingleMatchAnalysis> findByAnalysisStatusOrderByUpdatedAtDesc(
-            SingleMatchAnalysis.AnalysisStatus status);
+            AnalysisStatus status);
     
     /**
      * 특정 사용자의 최근 분석 조회 (제한된 개수)

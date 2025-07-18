@@ -1,6 +1,7 @@
 package org.mtvs.backend.analysis.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.mtvs.backend.analysis.entity.AnalysisStatus;
 import org.mtvs.backend.analysis.entity.SingleMatchAnalysis;
 import org.mtvs.backend.analysis.repository.SingleMatchAnalysisRepository;
 import org.mtvs.backend.gemini.service.GameAnalysisService;
@@ -18,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.Arrays;
-/// ////////////////
+
 @Service
 @Transactional
 public class SingleMatchAnalysisService {
@@ -51,7 +52,7 @@ public class SingleMatchAnalysisService {
         SingleMatchAnalysis analysis = new SingleMatchAnalysis();
         analysis.setPuuid(account.getPuuid());
         analysis.setTargetPlayerName(account.getGameName() + "#" + account.getTagLine());
-        analysis.setAnalysisStatus(SingleMatchAnalysis.AnalysisStatus.REQUESTED);
+        analysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
         
         return singleMatchAnalysisRepository.save(analysis);
     }
@@ -78,7 +79,7 @@ public class SingleMatchAnalysisService {
 
         List<SingleMatchAnalysis> requestedAnalyses = singleMatchAnalysisRepository
 
-                .findByAnalysisStatusOrderByCreatedAtDesc(SingleMatchAnalysis.AnalysisStatus.REQUESTED);
+                .findByAnalysisStatusOrderByCreatedAtDesc(AnalysisStatus.REQUESTED);
 
         SingleMatchAnalysis analysis = requestedAnalyses.stream()
 
@@ -105,12 +106,12 @@ public class SingleMatchAnalysisService {
                     newAnalysis.setPuuid(puuid);
                     newAnalysis.setMatchId(matchId);
                     newAnalysis.setTargetPlayerName("Temporary"); // 임시값, 나중에 매치 데이터에서 업데이트
-                    newAnalysis.setAnalysisStatus(SingleMatchAnalysis.AnalysisStatus.REQUESTED);
+                    newAnalysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
                     return singleMatchAnalysisRepository.save(newAnalysis);
                 });
         
         try {
-            analysis.setAnalysisStatus(SingleMatchAnalysis.AnalysisStatus.PROCESSING);
+            analysis.setAnalysisStatus(AnalysisStatus.PROCESSING);
             singleMatchAnalysisRepository.save(analysis);
             
             // Riot API에서 매치 상세 정보 가져오기
@@ -160,7 +161,7 @@ public class SingleMatchAnalysisService {
             
             analysis.setAiResponseData(aiResponseData);
             analysis.setAnalysisSummary(aiResponse);
-            analysis.setAnalysisStatus(SingleMatchAnalysis.AnalysisStatus.COMPLETED);
+            analysis.setAnalysisStatus(AnalysisStatus.COMPLETED);
             
             SingleMatchAnalysis savedAnalysis = singleMatchAnalysisRepository.save(analysis);
             
@@ -168,7 +169,7 @@ public class SingleMatchAnalysisService {
             
         } catch (Exception e) {
             logger.error("AI analysis failed for puuid: {}, matchId: {}", puuid, matchId, e);
-            analysis.setAnalysisStatus(SingleMatchAnalysis.AnalysisStatus.FAILED);
+            analysis.setAnalysisStatus(AnalysisStatus.FAILED);
             analysis.setErrorMessage(e.getMessage());
             singleMatchAnalysisRepository.save(analysis);
             throw e;
@@ -227,11 +228,11 @@ public class SingleMatchAnalysisService {
         return singleMatchAnalysisRepository.findByPuuidAndMatchId(puuid, matchId);
     }
 
-    public List<SingleMatchAnalysis> getAnalysisByStatus(SingleMatchAnalysis.AnalysisStatus status) {
+    public List<SingleMatchAnalysis> getAnalysisByStatus(AnalysisStatus status) {
         return singleMatchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status);
     }
 
-    public List<SingleMatchAnalysis> getAnalysisByStatusWithPaging(SingleMatchAnalysis.AnalysisStatus status, int page, int size) {
+    public List<SingleMatchAnalysis> getAnalysisByStatusWithPaging(AnalysisStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return singleMatchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status, pageable).getContent();
     }
@@ -245,15 +246,15 @@ public class SingleMatchAnalysisService {
     }
 
     public long getCompletedCount() {
-        return singleMatchAnalysisRepository.countByAnalysisStatus(SingleMatchAnalysis.AnalysisStatus.COMPLETED);
+        return singleMatchAnalysisRepository.countByAnalysisStatus(AnalysisStatus.COMPLETED);
     }
 
     public List<SingleMatchAnalysis> getPendingAnalysis() {
         return singleMatchAnalysisRepository.findByAnalysisStatusInOrderByCreatedAtAsc(
-                Arrays.asList(SingleMatchAnalysis.AnalysisStatus.REQUESTED, SingleMatchAnalysis.AnalysisStatus.PROCESSING));
+                Arrays.asList(AnalysisStatus.REQUESTED, AnalysisStatus.PROCESSING));
     }
 
     public List<SingleMatchAnalysis> getFailedAnalysis() {
-        return singleMatchAnalysisRepository.findByAnalysisStatusOrderByUpdatedAtDesc(SingleMatchAnalysis.AnalysisStatus.FAILED);
+        return singleMatchAnalysisRepository.findByAnalysisStatusOrderByUpdatedAtDesc(AnalysisStatus.FAILED);
     }
 }

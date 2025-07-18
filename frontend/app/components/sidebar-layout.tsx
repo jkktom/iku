@@ -8,7 +8,8 @@ import {
   Menu,
   X,
   Plus,
-  History
+  History,
+  Users
 } from 'lucide-react'
 
 interface SidebarLayoutProps {
@@ -22,6 +23,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
   const navigation = [
     { name: 'AI 분석', href: '/', icon: Sparkles },
+    { name: '친구와 비교', href: '/duo-comparison', icon: Users },
     { name: '분석 기록', href: '/match-history', icon: History },
   ]
 
