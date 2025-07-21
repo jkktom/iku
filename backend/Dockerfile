@@ -7,9 +7,9 @@ WORKDIR /app
 # Gradle Wrapper와 설정 파일 복사
 COPY gradlew .
 COPY gradle gradle/
-COPY build.gradle .
 COPY settings.gradle .
-
+COPY backend /app/backend/
+COPY build.gradle .
 # 실행 권한 부여
 RUN chmod +x ./gradlew
 

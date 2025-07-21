@@ -60,7 +60,7 @@ export function NoticeBoard({ notices }: NoticeBoardProps) {
           </CardHeader>
           <CardContent className="p-0">
             {notices.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">등록된 공지사항이 없습니다.</div>
+              <div className="text-center py-12 text-slate-400">등록된 Q&A가 없습니다.</div>
             ) : (
               <div className="divide-y divide-slate-700">
                 {notices.map((notice) => (

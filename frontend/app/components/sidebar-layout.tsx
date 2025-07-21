@@ -21,14 +21,13 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const { isSignedIn } = useAuth()
 
   const navigation = [
-    { name: '공지사항', href: '/', icon: Megaphone },
-    { name: 'AI 분석', href: '/ai-analysis', icon: Sparkles },
+    { name: 'AI 분석', href: '/', icon: Sparkles },
     { name: '분석 기록', href: '/match-history', icon: History },
   ]
 
   const isActive = (href: string) => {
     if (href === '/') {
-      return location.pathname === '/' || location.pathname.startsWith('/announcement')
+      return location.pathname === '/' || location.pathname.startsWith('/ai-analysis')
     }
     return location.pathname === href || location.pathname.startsWith(href + '/')
   }

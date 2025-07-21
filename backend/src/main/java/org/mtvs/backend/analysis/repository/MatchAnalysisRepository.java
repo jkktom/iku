@@ -32,7 +32,7 @@ public interface MatchAnalysisRepository extends JpaRepository<MatchAnalysis, Lo
     
     // 분석 상태별 조회 (페이징)
     List<MatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(MatchAnalysis.AnalysisStatus status, org.springframework.data.domain.Pageable pageable);
-    
+
     // 특정 유저의 특정 상태 분석들 조회
     List<MatchAnalysis> findByPuuidAndAnalysisStatusOrderByCreatedAtDesc(
         String puuid, MatchAnalysis.AnalysisStatus status);
@@ -54,7 +54,7 @@ public interface MatchAnalysisRepository extends JpaRepository<MatchAnalysis, Lo
     
     // 중복 분석 방지를 위한 존재 확인
     boolean existsByPuuidAndMatchId(String puuid, String matchId);
-    
+
     // 상태별 카운트
     long countByAnalysisStatus(MatchAnalysis.AnalysisStatus status);
 }
