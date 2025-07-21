@@ -30,13 +30,13 @@ export default defineConfig({
       buffer: "buffer",
     },
   },
+  // ssr: {
+  //   noExternal: false,
+  // },
   server: {
-    host: true,
-    port: 3000,
-    allowedHosts: ["iku.life", "www.iku.life", "localhost", "127.0.0.1", "13.125.59.135"],
     proxy: {
-      "/api": {
-        target: process.env.VITE_API_BASE_URL || process.env.VITE_DEFAULT_API_URL || "http://localhost:8081",
+      '/api': {
+        target: process.env.VITE_API_BASE_URL || process.env.VITE_DEFAULT_API_URL || 'http://localhost:8081',
         changeOrigin: true,
       },
     },

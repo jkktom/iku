@@ -1,0 +1,52 @@
+server:
+  port: 8080
+
+spring:
+  # profiles.active 제거 - 이 줄을 삭제하세요!
+  
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://db-dev:5432/iku-dev-db}
+    username: ${DB_USERNAME:user}
+    password: ${DB_PASSWORD:5656}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        hbm2ddl:
+          auto: create-drop
+
+chat:
+  md-json:
+    storage-dir: ./md-reports
+
+gemini:
+  api:
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    key: ${GEMINI_API_KEY}
+
+naver:
+  api:
+    id: ${NAVER_API_ID}
+    secret: ${NAVER_API_SECRET}
+
+jwt:
+  secret: ${JWT_SECRET:4a8NRS86guvb1rzq1vlFPXOR4Nx96iKv4lnBAzDx8xo=}
+  access-token-expiration: 3600000
+  refresh-token-expiration: 604800000
+  guest-token-expiration: 3600000
+
+clerk:
+  domain: giving-ocelot-59.clerk.accounts.dev
+  secret-key: ${CLERK_SECRET_KEY}
+
+riot:
+  api:
+    key: ${RIOT_API_KEY}
