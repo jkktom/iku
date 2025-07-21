@@ -1,9 +1,17 @@
 server:
   port: ${SERVER_PORT:8080}
+  tomcat:
+    uri-encoding: UTF-8
 
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
   dotenv:
     location: .env

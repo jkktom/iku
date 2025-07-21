@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh:*)",
+      "Bash(curl:*)",
+      "Bash(cp:*)",
+      "Bash(chmod:*)",
+      "Bash(scp:*)",
+      "Bash(scp:*)",
+      "Bash(find:*)"
+    ],
+    "deny": []
+  }
+}
