@@ -57,8 +57,9 @@ public class DuoMatchAnalysisService {
             AccountDto player2Account = riotService.getAccountInfo(player2Name,player2Tag);
 
             // 2. 각 플레이어의 최근 매치 목록 조회 (최근 게임 10개 중 겹치는 매치 추출)
-            List<String> player1Matches = riotService.getMatchIds(player1Account.getPuuid(), 0, 10);
-            List<String> player2Matches = riotService.getMatchIds(player2Account.getPuuid(), 0, 10);
+            // 듀오 분석은 5개로 제한 (기존 10개 → 5개, 50% 데이터 절약)
+            List<String> player1Matches = riotService.getMatchIds(player1Account.getPuuid(), 0, 5);
+            List<String> player2Matches = riotService.getMatchIds(player2Account.getPuuid(), 0, 5);
 
             // 3. 공통 매치  중 같은 팀인 경우만 필터링
             List<String> sameTeamMatches = player1Matches.stream()

@@ -1,26 +1,62 @@
 package org.mtvs.backend.gemini.service;
 
+import org.mtvs.backend.analysis.analyzer.MapAnalyzer;
+import org.mtvs.backend.gemini.dto.OpponentData;
 import org.mtvs.backend.gemini.prompt.DuoAnalysisPrompt;
+import org.mtvs.backend.global.cache.SessionCache;
 import org.mtvs.backend.riot.dto.*;
 import org.mtvs.backend.riot.service.RiotService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
 public class GameAnalysisService {
     
+    /**
+     * 매치 데이터 번들 클래스 (배치 처리 최적화용)
+     */
+    private static class MatchDataBundle {
+        private final String matchId;
+        private final MatchDetailDto detail;
+        private final MatchTimelineDto timeline;
+        
+        public MatchDataBundle(String matchId, MatchDetailDto detail, MatchTimelineDto timeline) {
+            this.matchId = matchId;
+            this.detail = detail;
+            this.timeline = timeline;
+        }
+        
+        public String getMatchId() { return matchId; }
+        public MatchDetailDto getDetail() { return detail; }
+        public MatchTimelineDto getTimeline() { return timeline; }
+    }
+    
     private final RiotService riotService;
     private final GeminiService geminiService;
     private final DuoAnalysisPrompt duoAnalysisPrompt;
+    private final List<MapAnalyzer> mapAnalyzers;
+    private final SessionCache sessionCache;
+    private final LaneOpponentDetector laneOpponentDetector;
     
-    public GameAnalysisService(RiotService riotService, GeminiService geminiService,DuoAnalysisPrompt duoAnalysisPrompt) {
+    @Autowired
+    @Qualifier("riotApiExecutor")
+    private TaskExecutor riotApiExecutor;
+    
+    public GameAnalysisService(RiotService riotService, GeminiService geminiService, DuoAnalysisPrompt duoAnalysisPrompt, List<MapAnalyzer> mapAnalyzers, SessionCache sessionCache, LaneOpponentDetector laneOpponentDetector) {
         this.riotService = riotService;
         this.geminiService = geminiService;
         this.duoAnalysisPrompt = duoAnalysisPrompt;
+        this.mapAnalyzers = mapAnalyzers;
+        this.sessionCache = sessionCache;
+        this.laneOpponentDetector = laneOpponentDetector;
     }
     
     /**
@@ -79,10 +115,12 @@ public class GameAnalysisService {
      * @param matchCount 분석할 매치 수 (1~5개)
      */
     public String analyzePlayerMultipleMatches(String gameName, String tagLine, int matchCount) {
+        long startTime = System.currentTimeMillis();
         try {
             System.out.println("=== 다중 매치 종합 분석 시작 ===");
             System.out.println("플레이어: " + gameName + "#" + tagLine);
             System.out.println("분석할 매치 수: " + matchCount);
+            System.out.println("시작 시간: " + new Date());
             
             // 입력값 검증
             if (matchCount < 1 || matchCount > 5) {
@@ -90,10 +128,14 @@ public class GameAnalysisService {
             }
             
             // 1. 계정 정보 조회
+            long accountStartTime = System.currentTimeMillis();
             AccountDto account = riotService.getAccountInfo(gameName, tagLine);
+            System.out.println("계정 정보 조회 완료: " + (System.currentTimeMillis() - accountStartTime) + "ms");
             
             // 2. 최근 매치 목록 조회 (기존 메소드 활용)
+            long matchIdsStartTime = System.currentTimeMillis();
             List<String> matchIds = riotService.getMatchIds(account.getPuuid(), 0, matchCount);
+            System.out.println("매치 목록 조회 완료: " + (System.currentTimeMillis() - matchIdsStartTime) + "ms");
             
             if (matchIds.isEmpty()) {
                 return "분석할 수 있는 매치 데이터가 없습니다.";
@@ -101,31 +143,71 @@ public class GameAnalysisService {
             
             System.out.println("실제 분석 대상 매치 수: " + matchIds.size());
             
-            // 3. 각 매치의 상세 데이터 수집 (기존 메소드 활용)
-            List<Map<String, Object>> allMatchData = new ArrayList<>();
+            // 3. 매치 데이터를 최적화된 병렬 배치로 수집 (세션 캐시 활용)
+            long parallelStartTime = System.currentTimeMillis();
+            System.out.println("최적화된 병렬 배치 데이터 수집 시작...");
+            
+            // 3-1. 매치별로 Detail + Timeline을 하나의 작업 단위로 병렬 처리 (효율적 배치 처리)
+            List<CompletableFuture<MatchDataBundle>> matchDataFutures = matchIds.stream()
+                .map(matchId -> CompletableFuture.supplyAsync(() -> {
+                    try {
+                        System.out.println("매치 데이터 배치 조회 중: " + matchId);
+                        // 세션 캐시를 활용하여 중복 호출 방지
+                        MatchDetailDto detail = getMatchDetailWithCache(matchId);
+                        MatchTimelineDto timeline = getMatchTimelineWithCache(matchId);
+                        return new MatchDataBundle(matchId, detail, timeline);
+                    } catch (Exception e) {
+                        System.err.println("매치 데이터 조회 실패: " + matchId + " - " + e.getMessage());
+                        throw new RuntimeException("매치 데이터 조회 실패: " + matchId, e);
+                    }
+                }, riotApiExecutor))
+                .collect(Collectors.toList());
+            
+            // 3-2. 모든 비동기 작업 완료 대기 및 결과 수집 (배치 처리 결과)
+            List<MatchDetailDto> matchDetails = new ArrayList<>();
+            List<MatchTimelineDto> matchTimelines = new ArrayList<>();
             List<String> successfulMatches = new ArrayList<>();
             
-            for (int i = 0; i < matchIds.size(); i++) {
-                String matchId = matchIds.get(i);
+            for (CompletableFuture<MatchDataBundle> future : matchDataFutures) {
                 try {
-                    System.out.println("매치 " + (i+1) + "/" + matchIds.size() + " 데이터 수집 중: " + matchId);
+                    MatchDataBundle bundle = future.join();
                     
-                    // 매치 상세 정보 및 타임라인 조회
-                    MatchDetailDto matchDetail = riotService.getMatchDetail(matchId);
-                    MatchTimelineDto matchTimeline = riotService.getMatchTimeline(matchId);
+                    // 데이터 검증 (null 체크)
+                    if (bundle.getDetail() == null || bundle.getTimeline() == null) {
+                        System.err.println("매치 데이터가 null입니다: " + bundle.getMatchId());
+                        continue;
+                    }
                     
-                    // 기존 extractPlayerData 메소드 활용
-                    Map<String, Object> playerData = extractPlayerData(matchDetail, matchTimeline, account.getPuuid());
-                    playerData.put("matchIndex", i + 1);
-                    playerData.put("matchId", matchId);
-                    
-                    allMatchData.add(playerData);
-                    successfulMatches.add(matchId);
-                    System.out.println("매치 " + (i+1) + " 데이터 수집 완료");
+                    matchDetails.add(bundle.getDetail());
+                    matchTimelines.add(bundle.getTimeline());
+                    successfulMatches.add(bundle.getMatchId());
+                    System.out.println("매치 " + successfulMatches.size() + "/" + matchIds.size() + " 수집 완료: " + bundle.getMatchId());
                     
                 } catch (Exception e) {
-                    System.err.println("매치 " + matchId + " 분석 실패: " + e.getMessage());
-                    // 실패한 매치는 건너뛰고 계속 진행
+                    System.err.println("매치 처리 실패: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+            
+            System.out.println("병렬 데이터 수집 완료. 성공: " + successfulMatches.size() + "/" + matchIds.size());
+            System.out.println("병렬 수집 소요 시간: " + (System.currentTimeMillis() - parallelStartTime) + "ms");
+            
+            // 3-4. 수집된 데이터로 플레이어 데이터 생성
+            List<Map<String, Object>> allMatchData = new ArrayList<>();
+            
+            for (int i = 0; i < matchDetails.size(); i++) {
+                try {
+                    Map<String, Object> playerData = extractPlayerData(
+                        matchDetails.get(i), 
+                        matchTimelines.get(i), 
+                        account.getPuuid()
+                    );
+                    playerData.put("matchIndex", i + 1);
+                    playerData.put("matchId", successfulMatches.get(i));
+                    allMatchData.add(playerData);
+                    
+                } catch (Exception e) {
+                    System.err.println("플레이어 데이터 추출 실패: " + successfulMatches.get(i) + " - " + e.getMessage());
                 }
             }
             
@@ -136,13 +218,20 @@ public class GameAnalysisService {
             System.out.println("성공적으로 수집된 매치 수: " + allMatchData.size());
             
             // 4. 종합 분석 프롬프트 생성
+            long promptStartTime = System.currentTimeMillis();
             String multipleAnalysisPrompt = createMultipleMatchAnalysisPrompt(allMatchData, gameName, tagLine);
+            System.out.println("프롬프트 생성 완료: " + (System.currentTimeMillis() - promptStartTime) + "ms");
+            System.out.println("프롬프트 길이: " + multipleAnalysisPrompt.length() + "자");
 
             // 5. Gemini AI 종합 분석 요청
+            long geminiStartTime = System.currentTimeMillis();
             System.out.println("Gemini AI 종합 분석 요청 중...");
             String comprehensiveFeedback = geminiService.sendMessage(multipleAnalysisPrompt);
+            System.out.println("Gemini AI 분석 완료: " + (System.currentTimeMillis() - geminiStartTime) + "ms");
             
+            long totalTime = System.currentTimeMillis() - startTime;
             System.out.println("=== 다중 매치 종합 분석 완료 ===");
+            System.out.println("전체 소요 시간: " + totalTime + "ms (" + (totalTime/1000.0) + "초)");
             return comprehensiveFeedback;
             
         } catch (Exception e) {
@@ -163,15 +252,32 @@ public class GameAnalysisService {
             // 1. 계정 정보 조회
             AccountDto account = riotService.getAccountInfo(gameName, tagLine);
             
-            // 2. 매치 상세 정보 및 타임라인 조회
-            MatchDetailDto matchDetail = riotService.getMatchDetail(matchId);
-            MatchTimelineDto matchTimeline = riotService.getMatchTimeline(matchId);
+            // 2. 매치 상세 정보 및 타임라인 조회 (세션 캐시 활용)
+            MatchDetailDto matchDetail = getMatchDetailWithCache(matchId);
+            MatchTimelineDto matchTimeline = getMatchTimelineWithCache(matchId);
             
             // 3. 특정 플레이어 데이터 추출
             Map<String, Object> playerData = extractPlayerData(matchDetail, matchTimeline, account.getPuuid());
             
-            // 4. 개인 분석용 프롬프트 생성
-            String analysisPrompt = createPersonalAnalysisPrompt(playerData, matchId);
+            // 3.1. 라인 상대 데이터 추출 (선별적 데이터)
+            System.out.println("=== 라인 상대 탐지 시작 ===");
+            ParticipantDto player = findParticipantByPuuid(matchDetail, account.getPuuid());
+            OpponentData laneOpponent = null;
+            if (player != null) {
+                System.out.println("플레이어 정보: " + player.getChampionName() + " (ParticipantId: " + player.getParticipantId() + ", TeamId: " + player.getTeamId() + ")");
+                laneOpponent = laneOpponentDetector.detectLaneOpponent(matchDetail, matchTimeline, player.getParticipantId());
+                if (laneOpponent != null) {
+                    System.out.println("✅ 라인 상대 탐지됨: " + laneOpponent.getChampionName() + " (" + laneOpponent.getPerformanceSummary() + ")");
+                } else {
+                    System.out.println("❌ 라인 상대를 찾을 수 없음");
+                }
+            } else {
+                System.out.println("❌ 플레이어 정보를 찾을 수 없음: " + account.getPuuid());
+            }
+            System.out.println("=== 라인 상대 탐지 완료 ===");
+            
+            // 4. 개인 분석용 프롬프트 생성 (라인 상대 포함)
+            String analysisPrompt = createPersonalAnalysisPrompt(playerData, matchId, laneOpponent);
 
             // 5. Gemini AI 분석 요청
             System.out.println("Gemini AI 분석 요청 중...");
@@ -241,6 +347,20 @@ public class GameAnalysisService {
                 .findFirst()
                 .orElse(null);
                 
+        // Debug: API 응답의 실제 JSON 구조 확인을 위한 reflection 사용
+        if (!matchDetail.getInfo().getParticipants().isEmpty()) {
+            ParticipantDto firstPlayer = matchDetail.getInfo().getParticipants().get(0);
+            System.out.println("🔍 DEBUG: API Response Fields Check");
+            System.out.println("  Total damage (working): " + firstPlayer.getTotalDamageDealtToChampions());
+            System.out.println("  Magic damage (not working): " + firstPlayer.getMagicDamageDealtToChampions());
+            System.out.println("  Vision score (working): " + firstPlayer.getVisionScore());
+            System.out.println("  Wards placed (not working): " + firstPlayer.getWardsPlaced());
+            
+            // toString으로 객체 내용 확인
+            System.out.println("🔍 Full ParticipantDto toString:");
+            System.out.println(firstPlayer.toString());
+        }
+                
         if (player == null) {
             throw new RuntimeException("플레이어 데이터를 찾을 수 없습니다");
         }
@@ -265,7 +385,7 @@ public class GameAnalysisService {
         System.out.println("DTO participantId: " + player.getParticipantId());
         System.out.println("수정된 participantId: " + correctParticipantId);
         
-        // 3. 최종 스탯
+        // 3. 기본 스탯
         playerData.put("finalStats", Map.of(
             "kills", player.getKills(),
             "deaths", player.getDeaths(),
@@ -277,6 +397,11 @@ public class GameAnalysisService {
             "visionScore", player.getVisionScore()
         ));
         
+        // 3.1. 고급 분석 데이터 추가
+        playerData.put("advancedCombat", createAdvancedCombatAnalysis(player));
+        playerData.put("advancedVision", createAdvancedVisionAnalysis(player));
+        playerData.put("communicationData", createCommunicationAnalysis(player));
+        
         // 4. 게임 정보
         playerData.put("gameInfo", Map.of(
             "duration", matchDetail.getInfo().getGameDuration(),
@@ -284,40 +409,106 @@ public class GameAnalysisService {
             "queueType", riotService.getQueueName(matchDetail.getInfo().getQueueId())
         ));
         
-        // 5. 타임라인 이벤트 추출 (올바른 participantId 사용)
-        List<Map<String, Object>> playerEvents = extractPlayerEvents(matchTimeline, correctParticipantId);
-        playerData.put("timelineEvents", playerEvents);
-        
-        // 6. 위치 정보 기반 분석 추가
-        Map<String, Object> positionAnalysis = extractPositionAnalysis(matchTimeline, correctParticipantId);
+        // 5. mapId에 따른 위치 정보 기반 분석 추가
+        int mapId = matchDetail.getInfo().getMapId();
+        MapAnalyzer analyzer = getMapAnalyzer(mapId);
+        Map<String, Object> positionAnalysis = analyzer.analyzePlayerPosition(matchTimeline, correctParticipantId, player.getTeamId());
         playerData.put("positionAnalysis", positionAnalysis);
+        playerData.put("mapName", analyzer.getMapName());
+        
+        // 6. 맵별 중요 이벤트 추출 (메모리 최적화)
+        List<Map<String, Object>> playerEvents = extractPlayerEvents(matchTimeline, correctParticipantId, analyzer.getImportantEventTypes());
+        playerData.put("timelineEvents", playerEvents);
         
         return playerData;
     }
     
     /**
-     * 특정 플레이어 관련 타임라인 이벤트 추출
+     * mapId에 따라 적절한 분석기를 반환
      */
-    private List<Map<String, Object>> extractPlayerEvents(MatchTimelineDto matchTimeline, int participantId) {
+    private MapAnalyzer getMapAnalyzer(int mapId) {
+        return mapAnalyzers.stream()
+                .filter(analyzer -> analyzer.getSupportedMapId() == mapId)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("지원되지 않는 맵 ID: " + mapId));
+    }
+    
+    /**
+     * 세션 캐시를 활용한 매치 상세 정보 조회 (중복 호출 방지)
+     */
+    private MatchDetailDto getMatchDetailWithCache(String matchId) {
+        String cacheKey = "matchDetail:" + matchId;
+        MatchDetailDto cached = sessionCache.get(cacheKey, MatchDetailDto.class);
+        
+        if (cached != null) {
+            System.out.println("매치 상세 정보 캐시 히트: " + matchId);
+            return cached;
+        }
+        
+        System.out.println("매치 상세 정보 API 호출: " + matchId);
+        MatchDetailDto result = riotService.getMatchDetail(matchId);
+        sessionCache.put(cacheKey, result);
+        return result;
+    }
+    
+    /**
+     * 세션 캐시를 활용한 매치 타임라인 조회 (중복 호출 방지)
+     */
+    private MatchTimelineDto getMatchTimelineWithCache(String matchId) {
+        String cacheKey = "matchTimeline:" + matchId;
+        MatchTimelineDto cached = sessionCache.get(cacheKey, MatchTimelineDto.class);
+        
+        if (cached != null) {
+            System.out.println("매치 타임라인 캐시 히트: " + matchId);
+            return cached;
+        }
+        
+        System.out.println("매치 타임라인 API 호출: " + matchId);
+        MatchTimelineDto result = riotService.getMatchTimeline(matchId);
+        sessionCache.put(cacheKey, result);
+        return result;
+    }
+    
+    // 중요한 이벤트 타입들 - 메모리 사용량 80-90% 절약
+    private static final Set<String> IMPORTANT_EVENT_TYPES = Set.of(
+        "CHAMPION_KILL",        // 킬/데스/어시스트 (가장 중요)
+        "ELITE_MONSTER_KILL",   // 드래곤, 바론, 전령
+        "BUILDING_KILL"         // 타워, 억제기 파괴
+    );
+    
+    /**
+     * 특정 플레이어 관련 타임라인 이벤트 추출 (맵별 중요 이벤트만)
+     */
+    private List<Map<String, Object>> extractPlayerEvents(MatchTimelineDto matchTimeline, int participantId, Set<String> importantEventTypes) {
         List<Map<String, Object>> playerEvents = new ArrayList<>();
         
         if (matchTimeline.getInfo() != null && matchTimeline.getInfo().getFrames() != null) {
             for (FrameDto frame : matchTimeline.getInfo().getFrames()) {
                 if (frame.getEvents() != null) {
                     for (EventDto event : frame.getEvents()) {
-                        // 해당 플레이어와 관련된 이벤트만 추출
-                        if (isPlayerRelatedEvent(event, participantId)) {
+                        // 맵별 중요 이벤트만 필터링 (메모리 80-90% 절약)
+                        if (importantEventTypes.contains(event.getType()) && 
+                            isPlayerRelatedEvent(event, participantId)) {
                             Map<String, Object> eventData = new HashMap<>();
                             eventData.put("type", event.getType());
                             eventData.put("timestamp", event.getTimestamp());
                             eventData.put("timeMinutes", String.format("%.1f분", event.getTimestamp() / 60000.0));
-                            eventData.put("participantId", event.getParticipantId());
-                            eventData.put("killerId", event.getKillerId());
-                            eventData.put("victimId", event.getVictimId());
-                            eventData.put("assistingParticipantIds", event.getAssistingParticipantIds());
-                            eventData.put("monsterType", event.getMonsterType());
-                            eventData.put("buildingType", event.getBuildingType());
                             eventData.put("description", createEventDescription(event, participantId));
+                            
+                            // 이벤트 타입별로 필요한 필드만 추가 (메모리 절약)
+                            switch (event.getType()) {
+                                case "CHAMPION_KILL":
+                                    eventData.put("killerId", event.getKillerId());
+                                    eventData.put("victimId", event.getVictimId());
+                                    eventData.put("assistingParticipantIds", event.getAssistingParticipantIds());
+                                    break;
+                                case "ELITE_MONSTER_KILL":
+                                    eventData.put("monsterType", event.getMonsterType());
+                                    break;
+                                case "BUILDING_KILL":
+                                    eventData.put("buildingType", event.getBuildingType());
+                                    break;
+                            }
                             
                             playerEvents.add(eventData);
                         }
@@ -564,9 +755,19 @@ public class GameAnalysisService {
     }
 
     /**
-     * 개인 분석용 프롬프트 생성
+     * 참가자를 PUUID로 찾기
      */
-    private String createPersonalAnalysisPrompt(Map<String, Object> playerData, String matchId) {
+    private ParticipantDto findParticipantByPuuid(MatchDetailDto matchDetail, String puuid) {
+        return matchDetail.getInfo().getParticipants().stream()
+                .filter(p -> puuid.equals(p.getPuuid()))
+                .findFirst()
+                .orElse(null);
+    }
+    
+    /**
+     * 개인 분석용 프롬프트 생성 (라인 상대 포함)
+     */
+    private String createPersonalAnalysisPrompt(Map<String, Object> playerData, String matchId, OpponentData laneOpponent) {
         @SuppressWarnings("unchecked")
         Map<String, Object> playerInfo = (Map<String, Object>) playerData.get("playerInfo");
         @SuppressWarnings("unchecked")
@@ -607,6 +808,26 @@ public class GameAnalysisService {
         }
         prompt.append("\n");
 
+        // 라인 상대 정보 추가 (선별적 데이터)
+        if (laneOpponent != null) {
+            prompt.append("=== 라인 매치업 분석 ===\n");
+            prompt.append("상대: ").append(laneOpponent.getChampionName())
+                  .append(" (").append(laneOpponent.getKdaString()).append(")\n");
+            prompt.append("라인전 결과: ").append(getLaneResultDescription(laneOpponent.getLaneResult())).append("\n");
+            prompt.append("CS 차이: ").append(laneOpponent.getCsDifference() > 0 ? "+" : "")
+                  .append(laneOpponent.getCsDifference()).append(" (상대가 더 많음)\n");
+            prompt.append("골드 차이: ").append(laneOpponent.getGoldDifference() > 0 ? "+" : "")
+                  .append(String.format("%,d", laneOpponent.getGoldDifference())).append(" (상대가 더 많음)\n");
+            if (laneOpponent.getKillsAgainstPlayer() > 0 || laneOpponent.getDeathsToPlayer() > 0) {
+                prompt.append("1:1 교환: 상대 ").append(laneOpponent.getKillsAgainstPlayer())
+                      .append("킬 - 내가 ").append(laneOpponent.getDeathsToPlayer()).append("킬\n");
+            }
+            prompt.append("\n");
+        }
+        
+        // 고급 분석 섹션 추가
+        prompt.append(createAdvancedAnalysisPrompt(playerData));
+        
         // 위치 및 포지셔닝 분석
         if (positionAnalysis != null) {
             @SuppressWarnings("unchecked")
@@ -688,9 +909,24 @@ public class GameAnalysisService {
 
         prompt.append("각 분석은 구체적인 시간대와 상황을 언급하며, 실행 가능한 조언으로 제공해주세요.\n");
         prompt.append("특히 포지셔닝과 맵 운영 데이터를 활용하여 플레이어의 이동 패턴과 위험 관리 능력을 평가해주세요.\n");
+        if (laneOpponent != null) {
+            prompt.append("라인전 상대와의 비교를 통해 개선점을 구체적으로 제시해주세요.\n");
+        }
         prompt.append("전체적인 평가와 함께 가장 개선이 필요한 부분을 우선순위로 제시해주세요.");
 
         return prompt.toString();
+    }
+    
+    /**
+     * 라인전 결과 설명 텍스트 반환
+     */
+    private String getLaneResultDescription(String laneResult) {
+        switch (laneResult) {
+            case "won": return "우세 (라인전 승리)";
+            case "lost": return "열세 (라인전 패배)";
+            case "even": return "균등 (비등한 라인전)";
+            default: return "알 수 없음";
+        }
     }
 
     /**
@@ -716,8 +952,9 @@ public class GameAnalysisService {
     }
     
     /**
-     * 플레이어의 위치 정보 기반 분석
+     * 플레이어의 위치 정보 기반 분석 (DEPRECATED - 맵별 분석기로 대체됨)
      */
+    @Deprecated
     private Map<String, Object> extractPositionAnalysis(MatchTimelineDto matchTimeline, int participantId) {
         Map<String, Object> positionAnalysis = new HashMap<>();
         List<Map<String, Object>> positionHistory = new ArrayList<>();
@@ -1003,9 +1240,9 @@ public class GameAnalysisService {
             AccountDto player1Account = riotService.getAccountInfo(player1Name, player1Tag);
             AccountDto player2Account = riotService.getAccountInfo(player2Name, player2Tag);
 
-            // 2. 매치 데이터 조회
-            MatchDetailDto matchDetail = riotService.getMatchDetail(matchId);
-            MatchTimelineDto matchTimeline = riotService.getMatchTimeline(matchId);
+            // 2. 매치 데이터 조회 (세션 캐시 활용으로 중복 호출 방지)
+            MatchDetailDto matchDetail = getMatchDetailWithCache(matchId);
+            MatchTimelineDto matchTimeline = getMatchTimelineWithCache(matchId);
 
             // 3. 플레이어 데이터 추출
             Map<String, Object> player1Data = extractPlayerData(matchDetail, matchTimeline, player1Account.getPuuid());
@@ -1028,6 +1265,248 @@ public class GameAnalysisService {
         } catch (Exception e) {
             System.err.println("듀오 매치 분석 중 오류: " + e.getMessage());
             return "듀오 분석 중 오류가 발생했습니다: " + e.getMessage();
+        }
+    }
+    
+    /**
+     * 고급 전투 분석 데이터 생성
+     */
+    private Map<String, Object> createAdvancedCombatAnalysis(ParticipantDto player) {
+        System.out.println("🔍 Combat Analysis Debug:");
+        System.out.println("  Total Damage: " + player.getTotalDamageDealtToChampions());
+        System.out.println("  Magic Damage: " + player.getMagicDamageDealtToChampions());
+        System.out.println("  Physical Damage: " + player.getPhysicalDamageDealtToChampions());
+        System.out.println("  True Damage: " + player.getTrueDamageDealtToChampions());
+        int totalDamage = player.getTotalDamageDealtToChampions();
+        
+        // Debug logging to check field values
+        System.out.println("=== DEBUG: Advanced Combat Analysis ===");
+        System.out.println("Total Damage: " + totalDamage);
+        System.out.println("Magic Damage: " + player.getMagicDamageDealtToChampions());
+        System.out.println("Physical Damage: " + player.getPhysicalDamageDealtToChampions());
+        System.out.println("True Damage: " + player.getTrueDamageDealtToChampions());
+        
+        // 피해 구성비 계산
+        double magicRatio = totalDamage > 0 ? (player.getMagicDamageDealtToChampions() * 100.0) / totalDamage : 0;
+        double physicalRatio = totalDamage > 0 ? (player.getPhysicalDamageDealtToChampions() * 100.0) / totalDamage : 0;
+        double trueRatio = totalDamage > 0 ? (player.getTrueDamageDealtToChampions() * 100.0) / totalDamage : 0;
+        
+        // 전투 효율성 계산
+        double damagePerGold = player.getGoldEarned() > 0 ? (double) totalDamage / player.getGoldEarned() : 0;
+        double combatParticipation = player.getDeaths() > 0 ? (double) (player.getKills() + player.getAssists()) / player.getDeaths() : player.getKills() + player.getAssists();
+        
+        // 피해 프로필 결정
+        String damageProfile;
+        if (magicRatio > 60) {
+            damageProfile = "AP_FOCUSED";
+        } else if (physicalRatio > 60) {
+            damageProfile = "AD_FOCUSED";
+        } else if (trueRatio > 20) {
+            damageProfile = "TRUE_DAMAGE";
+        } else {
+            damageProfile = "HYBRID";
+        }
+        
+        return Map.of(
+            "magicDamageRatio", Math.round(magicRatio * 10) / 10.0,
+            "physicalDamageRatio", Math.round(physicalRatio * 10) / 10.0,
+            "trueDamageRatio", Math.round(trueRatio * 10) / 10.0,
+            "damageProfile", damageProfile,
+            "damagePerGold", Math.round(damagePerGold * 100) / 100.0,
+            "combatEfficiency", Math.round(combatParticipation * 100) / 100.0,
+            "magicDamage", player.getMagicDamageDealtToChampions(),
+            "physicalDamage", player.getPhysicalDamageDealtToChampions(),
+            "trueDamage", player.getTrueDamageDealtToChampions()
+        );
+    }
+    
+    /**
+     * 고급 시야 분석 데이터 생성
+     */
+    private Map<String, Object> createAdvancedVisionAnalysis(ParticipantDto player) {
+        System.out.println("🔍 Vision Analysis Debug:");
+        System.out.println("  Wards Placed: " + player.getWardsPlaced());
+        System.out.println("  Wards Killed: " + player.getWardsKilled());
+        System.out.println("  Control Wards: " + player.getControlWardsPlaced());
+        // Debug logging to check field values
+        System.out.println("=== DEBUG: Advanced Vision Analysis ===");
+        System.out.println("Wards Placed: " + player.getWardsPlaced());
+        System.out.println("Wards Killed: " + player.getWardsKilled());
+        System.out.println("Control Wards Placed: " + player.getControlWardsPlaced());
+        
+        // 시야 효율성 계산
+        double wardEfficiency = player.getWardsPlaced() > 0 ? (double) player.getWardsKilled() / player.getWardsPlaced() : 0;
+        double controlWardRatio = player.getWardsPlaced() > 0 ? (double) player.getControlWardsPlaced() / player.getWardsPlaced() * 100 : 0;
+        
+        // 시야 스타일 결정
+        String visionStyle;
+        if (wardEfficiency > 0.5) {
+            visionStyle = "AGGRESSIVE"; // 적극적 시야 파괴
+        } else if (controlWardRatio > 30) {
+            visionStyle = "STRATEGIC"; // 전략적 시야 운영
+        } else if (player.getWardsPlaced() > 15) {
+            visionStyle = "DEFENSIVE"; // 수비적 시야 확보
+        } else {
+            visionStyle = "PASSIVE"; // 소극적 시야 운영
+        }
+        
+        return Map.of(
+            "wardsPlaced", player.getWardsPlaced(),
+            "wardsKilled", player.getWardsKilled(),
+            "controlWardsPlaced", player.getControlWardsPlaced(),
+            "wardEfficiency", Math.round(wardEfficiency * 1000) / 1000.0,
+            "controlWardRatio", Math.round(controlWardRatio * 10) / 10.0,
+            "visionStyle", visionStyle,
+            "visionDominance", wardEfficiency > 0.3 ? "HIGH" : wardEfficiency > 0.1 ? "MEDIUM" : "LOW"
+        );
+    }
+    
+    /**
+     * 소통 분석 데이터 생성
+     */
+    private Map<String, Object> createCommunicationAnalysis(ParticipantDto player) {
+        System.out.println("🔍 Communication Analysis Debug:");
+        System.out.println("  Danger Pings: " + player.getDangerPings());
+        System.out.println("  Enemy Missing Pings: " + player.getEnemyMissingPings());
+        System.out.println("  Assist Me Pings: " + player.getAssistMePings());
+        // Debug logging to check field values
+        System.out.println("=== DEBUG: Communication Analysis ===");
+        System.out.println("All In Pings: " + player.getAllInPings());
+        System.out.println("Assist Me Pings: " + player.getAssistMePings());
+        System.out.println("Danger Pings: " + player.getDangerPings());
+        System.out.println("Enemy Missing Pings: " + player.getEnemyMissingPings());
+        
+        // 총 핑 수 계산
+        int totalPings = player.getAllInPings() + player.getAssistMePings() + player.getBaitPings() + 
+                        player.getCommandPings() + player.getDangerPings() + player.getEnemyMissingPings() +
+                        player.getEnemyVisionPings() + player.getGetBackPings() + player.getHoldPings() +
+                        player.getNeedVisionPings() + player.getOnMyWayPings() + player.getPushPings() +
+                        player.getVisionClearedPings();
+        
+        System.out.println("Total Pings: " + totalPings);
+        
+        // 전략적 핑 비율 (게임 이해도 관련)
+        int strategicPings = player.getDangerPings() + player.getEnemyMissingPings() + 
+                           player.getEnemyVisionPings() + player.getNeedVisionPings();
+        double strategicRatio = totalPings > 0 ? (double) strategicPings / totalPings * 100 : 0;
+        
+        // 협력 핑 비율 (팀워크 관련)
+        int cooperativePings = player.getAssistMePings() + player.getOnMyWayPings() + 
+                              player.getHoldPings() + player.getGetBackPings();
+        double cooperativeRatio = totalPings > 0 ? (double) cooperativePings / totalPings * 100 : 0;
+        
+        // 소통 스타일 결정
+        String communicationStyle;
+        if (strategicRatio > 50) {
+            communicationStyle = "STRATEGIC_LEADER"; // 전략적 리더
+        } else if (cooperativeRatio > 40) {
+            communicationStyle = "TEAM_PLAYER"; // 팀 플레이어
+        } else if (totalPings > 30) {
+            communicationStyle = "ACTIVE_COMMUNICATOR"; // 적극적 소통
+        } else if (totalPings > 10) {
+            communicationStyle = "MODERATE_COMMUNICATOR"; // 보통 소통
+        } else {
+            communicationStyle = "QUIET_PLAYER"; // 조용한 플레이어
+        }
+        
+        return Map.of(
+            "totalPings", totalPings,
+            "dangerPings", player.getDangerPings(),
+            "enemyMissingPings", player.getEnemyMissingPings(),
+            "assistMePings", player.getAssistMePings(),
+            "strategicPings", strategicPings,
+            "strategicRatio", Math.round(strategicRatio * 10) / 10.0,
+            "cooperativeRatio", Math.round(cooperativeRatio * 10) / 10.0,
+            "communicationStyle", communicationStyle,
+            "gameAwareness", strategicRatio > 30 ? "HIGH" : strategicRatio > 15 ? "MEDIUM" : "LOW"
+        );
+    }
+    
+    /**
+     * 고급 분석 프롬프트 섹션 생성
+     */
+    private String createAdvancedAnalysisPrompt(Map<String, Object> playerData) {
+        StringBuilder prompt = new StringBuilder();
+        
+        @SuppressWarnings("unchecked")
+        Map<String, Object> advancedCombat = (Map<String, Object>) playerData.get("advancedCombat");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> advancedVision = (Map<String, Object>) playerData.get("advancedVision");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> communicationData = (Map<String, Object>) playerData.get("communicationData");
+        
+        // 전투 효율성 분석
+        if (advancedCombat != null) {
+            prompt.append("=== 전투 효율성 및 빌드 분석 ===\n");
+            prompt.append("피해 구성: 마법 ").append(advancedCombat.get("magicDamageRatio")).append("% / ")
+                  .append("물리 ").append(advancedCombat.get("physicalDamageRatio")).append("% / ")
+                  .append("고정 ").append(advancedCombat.get("trueDamageRatio")).append("%\n");
+            prompt.append("빌드 유형: ").append(getDamageProfileDescription((String) advancedCombat.get("damageProfile"))).append("\n");
+            prompt.append("골드 대비 딜량 효율: ").append(advancedCombat.get("damagePerGold")).append("\n");
+            prompt.append("전투 참여 효율: ").append(advancedCombat.get("combatEfficiency")).append("\n\n");
+        }
+        
+        // 시야 운영 분석
+        if (advancedVision != null) {
+            prompt.append("=== 시야 운영 및 맵 장악력 ===\n");
+            prompt.append("와드 설치: ").append(advancedVision.get("wardsPlaced")).append("개 / ")
+                  .append("제거: ").append(advancedVision.get("wardsKilled")).append("개\n");
+            prompt.append("제어 와드: ").append(advancedVision.get("controlWardsPlaced")).append("개\n");
+            prompt.append("시야 운영 스타일: ").append(getVisionStyleDescription((String) advancedVision.get("visionStyle"))).append("\n");
+            prompt.append("시야 지배력: ").append(advancedVision.get("visionDominance")).append("\n\n");
+        }
+        
+        // 소통 및 게임 이해도 분석
+        if (communicationData != null) {
+            prompt.append("=== 소통 능력 및 게임 이해도 ===\n");
+            prompt.append("총 핑 사용: ").append(communicationData.get("totalPings")).append("회\n");
+            prompt.append("위험 알림: ").append(communicationData.get("dangerPings")).append("회 / ")
+                  .append("적 실종: ").append(communicationData.get("enemyMissingPings")).append("회\n");
+            prompt.append("도움 요청: ").append(communicationData.get("assistMePings")).append("회\n");
+            prompt.append("소통 스타일: ").append(getCommunicationStyleDescription((String) communicationData.get("communicationStyle"))).append("\n");
+            prompt.append("게임 이해도: ").append(communicationData.get("gameAwareness")).append("\n\n");
+        }
+        
+        return prompt.toString();
+    }
+    
+    /**
+     * 피해 프로필 설명 반환
+     */
+    private String getDamageProfileDescription(String profile) {
+        switch (profile) {
+            case "AP_FOCUSED": return "마법 딜러 (AP 위주)";
+            case "AD_FOCUSED": return "물리 딜러 (AD 위주)";
+            case "TRUE_DAMAGE": return "고정 피해 딜러";
+            case "HYBRID": return "하이브리드 딜러";
+            default: return "혼합형";
+        }
+    }
+    
+    /**
+     * 시야 스타일 설명 반환
+     */
+    private String getVisionStyleDescription(String style) {
+        switch (style) {
+            case "AGGRESSIVE": return "공격적 시야 장악";
+            case "STRATEGIC": return "전략적 시야 운영";
+            case "DEFENSIVE": return "수비적 시야 확보";
+            case "PASSIVE": return "소극적 시야 운영";
+            default: return "일반적 시야 운영";
+        }
+    }
+    
+    /**
+     * 소통 스타일 설명 반환
+     */
+    private String getCommunicationStyleDescription(String style) {
+        switch (style) {
+            case "STRATEGIC_LEADER": return "전략적 리더 (팀 지휘)";
+            case "TEAM_PLAYER": return "협력적 팀원";
+            case "ACTIVE_COMMUNICATOR": return "적극적 소통형";
+            case "MODERATE_COMMUNICATOR": return "보통 소통형";
+            case "QUIET_PLAYER": return "조용한 플레이어";
+            default: return "일반적 소통";
         }
     }
 

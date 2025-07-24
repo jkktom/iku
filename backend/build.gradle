@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.4.5'
+    id 'org.springframework.boot' version '3.3.2'
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -50,6 +50,10 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'io.hypersistence:hypersistence-utils-hibernate-63:3.9.8'
+    
+    // Redis Cache
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
 
     // Security & JWT
     implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -71,6 +75,10 @@ dependencies {
     implementation "org.modelmapper:modelmapper:${modelMapperVersion}"
     implementation "me.paulschwarz:spring-dotenv:${springDotenvVersion}"
     implementation "com.clerk:backend-api:${clerkVersion}"
+    
+    // HTTP Client (Spring Boot 3.x 호환)
+    implementation 'org.apache.httpcomponents.client5:httpclient5'
+
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'

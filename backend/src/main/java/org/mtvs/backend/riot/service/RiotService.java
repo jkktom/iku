@@ -4,6 +4,7 @@ import org.mtvs.backend.riot.dto.AccountDto;
 import org.mtvs.backend.riot.dto.MatchDetailDto;
 import org.mtvs.backend.riot.dto.MatchTimelineDto;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -12,6 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.method.support.UriComponentsContributor;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.http.ResponseEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -19,6 +23,7 @@ import java.util.Map;
 /* 게임 매치 관련 */
 @Service
 public class RiotService {
+    private static final Logger logger = LoggerFactory.getLogger(RiotService.class);
     private final RestTemplate restTemplate;
 
     @Value("${riot.api.key}")
@@ -39,6 +44,7 @@ public class RiotService {
         this.restTemplate = restTemplate;
     }
     /* 유저의 정보 (puuid, gameName, tagLine 출력) */
+    @Cacheable(value = "riotAccountInfo", key = "#gameName + '_' + #tagLine")
     public AccountDto getAccountInfo(String gameName, String tagLine) {
         String url = UriComponentsBuilder.fromHttpUrl(ASIA_BASE_URL)
                 .path("/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}")
@@ -69,12 +75,42 @@ public class RiotService {
         ).getBody();
     }
     /* 해당 매치의 상세 정보*/
+    @Cacheable(value = "riotMatchData", key = "#matchId")
     public MatchDetailDto getMatchDetail(String matchId) {
         String url = UriComponentsBuilder.fromHttpUrl(ASIA_BASE_URL)
                 .path("/lol/match/v5/matches/{matchId}")
                 .buildAndExpand(matchId)
                 .toUriString();
 
+        // First get the raw response to log participant data
+        ResponseEntity<String> rawResponse = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                createHttpEntity(),
+                String.class
+        );
+        
+        // Log a sample of participant data to debug field mappings
+        String responseBody = rawResponse.getBody();
+        if (responseBody != null && responseBody.contains("participants")) {
+            // Extract and log first participant data for debugging
+            try {
+                int participantsStart = responseBody.indexOf("\"participants\":[{");
+                if (participantsStart != -1) {
+                    int firstParticipantEnd = responseBody.indexOf("},", participantsStart);
+                    if (firstParticipantEnd != -1) {
+                        String firstParticipant = responseBody.substring(participantsStart, firstParticipantEnd + 1);
+                        logger.info("=== DEBUG: First Participant JSON Sample ===");
+                        logger.info(firstParticipant.substring(0, Math.min(500, firstParticipant.length())));
+                        logger.info("=== END DEBUG ===");
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to extract participant debug info", e);
+            }
+        }
+
+        // Now get the properly deserialized response
         return restTemplate.exchange(
                 url,
                 HttpMethod.GET,
@@ -83,6 +119,7 @@ public class RiotService {
         ).getBody();
     }
     /* 해당 매치의 타임라인별 정보*/
+    @Cacheable(value = "riotMatchTimeline", key = "#matchId")
     public MatchTimelineDto getMatchTimeline(String matchId) {
         String url = UriComponentsBuilder.fromHttpUrl(ASIA_BASE_URL)
                 .path("/lol/match/v5/matches/{matchId}/timeline")

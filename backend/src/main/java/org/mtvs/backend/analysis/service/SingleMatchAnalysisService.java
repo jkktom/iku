@@ -1,13 +1,16 @@
 package org.mtvs.backend.analysis.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.mtvs.backend.analysis.analyzer.ContextualAnalyzer;
 import org.mtvs.backend.analysis.entity.AnalysisStatus;
 import org.mtvs.backend.analysis.entity.SingleMatchAnalysis;
 import org.mtvs.backend.analysis.repository.SingleMatchAnalysisRepository;
 import org.mtvs.backend.gemini.service.GameAnalysisService;
+import org.mtvs.backend.gemini.service.LaneOpponentDetector;
 import org.mtvs.backend.riot.dto.AccountDto;
 import org.mtvs.backend.riot.dto.MatchDetailDto;
 import org.mtvs.backend.riot.dto.MatchTimelineDto;
+import org.mtvs.backend.riot.dto.ParticipantDto;
 import org.mtvs.backend.riot.service.RiotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,16 +33,22 @@ public class SingleMatchAnalysisService {
     private final GameAnalysisService gameAnalysisService;
     private final RiotService riotService;
     private final ObjectMapper objectMapper;
+    private final ContextualAnalyzer contextualAnalyzer;
+    private final LaneOpponentDetector laneOpponentDetector;
 
     @Autowired
     public SingleMatchAnalysisService(SingleMatchAnalysisRepository singleMatchAnalysisRepository,
                                      GameAnalysisService gameAnalysisService,
                                      RiotService riotService,
-                                     ObjectMapper objectMapper) {
+                                     ObjectMapper objectMapper,
+                                     ContextualAnalyzer contextualAnalyzer,
+                                     LaneOpponentDetector laneOpponentDetector) {
         this.singleMatchAnalysisRepository = singleMatchAnalysisRepository;
         this.gameAnalysisService = gameAnalysisService;
         this.riotService = riotService;
         this.objectMapper = objectMapper;
+        this.contextualAnalyzer = contextualAnalyzer;
+        this.laneOpponentDetector = laneOpponentDetector;
     }
 
     /**
@@ -138,6 +147,24 @@ public class SingleMatchAnalysisService {
                         });
             }
             
+            // 타겟 플레이어 찾기
+            ParticipantDto targetPlayer = matchDetail.getInfo().getParticipants().stream()
+                    .filter(p -> p.getPuuid().equals(puuid))
+                    .findFirst()
+                    .orElse(null);
+            
+            if (targetPlayer == null) {
+                throw new IllegalArgumentException("타겟 플레이어를 찾을 수 없습니다.");
+            }
+            
+            // 포지션 결정 (라인 분석 사용)
+            String position = determinePlayerPosition(matchDetail, matchTimeline, targetPlayer);
+            
+            // 컨텍스트 분석 수행
+            Map<String, Object> contextualAnalysis = contextualAnalyzer.performContextualAnalysis(
+                matchDetail.getInfo(), targetPlayer, position
+            );
+            
             // AI 분석 수행
             Map<String, Object> aiRequest = buildAIRequestData(matchDetail, matchTimeline, puuid, matchId);
             analysis.setAiRequestData(aiRequest);
@@ -152,9 +179,10 @@ public class SingleMatchAnalysisService {
             
             String aiResponse = gameAnalysisService.analyzePlayerMatch(gameName, tagLine, matchId);
             
-            // AI 응답 데이터 저장
+            // AI 응답 데이터 저장 (컨텍스트 분석 포함)
             Map<String, Object> aiResponseData = Map.of(
                     "analysisResult", aiResponse,
+                    "contextualAnalysis", contextualAnalysis,
                     "analyzedAt", System.currentTimeMillis(),
                     "analysisType", "SINGLE_MATCH"
             );
@@ -256,5 +284,41 @@ public class SingleMatchAnalysisService {
 
     public List<SingleMatchAnalysis> getFailedAnalysis() {
         return singleMatchAnalysisRepository.findByAnalysisStatusOrderByUpdatedAtDesc(AnalysisStatus.FAILED);
+    }
+    
+    /**
+     * 플레이어 포지션 결정 (라인 분석 기반)
+     */
+    private String determinePlayerPosition(MatchDetailDto matchDetail, MatchTimelineDto matchTimeline, ParticipantDto player) {
+        try {
+            // LaneOpponentDetector를 사용해 주요 활동 라인 분석
+            var opponentData = laneOpponentDetector.detectLaneOpponent(matchDetail, matchTimeline, player.getParticipantId());
+            
+            // 간단한 포지션 매핑 (실제로는 더 정교한 로직 필요)
+            // 임시로 participantId 기반 매핑 사용
+            int participantId = player.getParticipantId();
+            if (participantId <= 5) { // 블루팀
+                switch (participantId) {
+                    case 1: return "TOP";
+                    case 2: return "JUNGLE"; 
+                    case 3: return "MIDDLE";
+                    case 4: return "BOTTOM";
+                    case 5: return "UTILITY";
+                }
+            } else { // 레드팀
+                switch (participantId) {
+                    case 6: return "TOP";
+                    case 7: return "JUNGLE";
+                    case 8: return "MIDDLE"; 
+                    case 9: return "BOTTOM";
+                    case 10: return "UTILITY";
+                }
+            }
+            
+            return "UNKNOWN";
+        } catch (Exception e) {
+            logger.warn("포지션 결정 중 오류 발생: {}", e.getMessage());
+            return "UNKNOWN";
+        }
     }
 }

@@ -25,6 +25,11 @@ public class PlayerAnalysisController {
             @PathVariable String tagLine,
             @RequestParam(defaultValue = "5") int count) {
         
+        // 매치 수 제한 (최대 5개, 데이터 절약)
+        if (count > 5) {
+            count = 5;
+        }
+        
         try {
             Map<String, Object> result = gameAnalysisService.getPlayerMatches(gameName, tagLine, count);
             return ResponseEntity.ok(result);

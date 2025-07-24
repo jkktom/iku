@@ -14,6 +14,17 @@ services:
       - iku-network
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: iku-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - iku-network
+    restart: unless-stopped
+
   backend:
     build: 
       context: .  # 루트 디렉토리로 변경
@@ -28,10 +39,13 @@ services:
       - DB_PASSWORD=5656
       - SHOW_SQL=true
       - LOG_LEVEL_APP=DEBUG
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     env_file:
       - ./backend/.env
     depends_on:
       - db
+      - redis
     networks:
       - iku-network
     restart: unless-stopped
@@ -43,25 +57,22 @@ services:
     build: 
       context: ./frontend
       dockerfile: Dockerfile.dev
+      args:
+        VITE_API_BASE_URL: https://iku.life
+        VITE_CLERK_PUBLISHABLE_KEY: pk_test_Z2l2aW5nLW9jZWxvdC01OS5jbGVyay5hY2NvdW50cy5kZXYk
+        NODE_ENV: development
     container_name: iku-frontend-dev
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - VITE_API_BASE_URL=http://13.125.59.135:8080
-    env_file:
-      - ./frontend/.env
     depends_on:
       - backend
     networks:
       - iku-network
     restart: unless-stopped
-    volumes:
-      - ./frontend/app:/app/app:ro  # 소스 코드 핫 리로드
-      - /app/node_modules
 
 volumes:
   pgdata_dev:
+  redis_data_dev:
 
 networks:
   iku-network:

@@ -7,7 +7,17 @@
       "Bash(chmod:*)",
       "Bash(scp:*)",
       "Bash(scp:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker logs:*)",
+      "Bash(./gradlew:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:developer.riotgames.com)",
+      "WebFetch(domain:riot-api-libraries.readthedocs.io)",
+      "Bash(java:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
