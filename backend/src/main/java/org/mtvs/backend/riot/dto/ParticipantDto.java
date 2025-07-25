@@ -10,6 +10,8 @@ public class ParticipantDto {
     private String riotIdTagline; //라이엇 태그
     private String summonerName; //인게임 소환사명 -> 라이엇 계정 게임명과 동일
     private String championName; //플레이한 챔피언 이름
+    private String teamPosition; //팀 내 포지션 (TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY)
+    private String individualPosition; //개별 포지션 (lane 정보)
     private int kills; //킬 수
     private int deaths; //데스 수
     private int assists; //어시스트 수
@@ -375,5 +377,21 @@ public class ParticipantDto {
 
     public void setVisionClearedPings(int visionClearedPings) {
         this.visionClearedPings = visionClearedPings;
+    }
+
+    public String getTeamPosition() {
+        return teamPosition;
+    }
+
+    public void setTeamPosition(String teamPosition) {
+        this.teamPosition = teamPosition;
+    }
+
+    public String getIndividualPosition() {
+        return individualPosition;
+    }
+
+    public void setIndividualPosition(String individualPosition) {
+        this.individualPosition = individualPosition;
     }
 }

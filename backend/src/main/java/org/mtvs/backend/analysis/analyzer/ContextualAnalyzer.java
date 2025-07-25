@@ -13,60 +13,97 @@ import java.util.*;
 @Component
 public class ContextualAnalyzer {
     
-    // 포지션별 평균 기준값들 (일반적인 솔로랭크 기준)
-    private static final Map<String, Map<String, Double>> POSITION_AVERAGES = Map.of(
-        "TOP", Map.of(
-            "damagePerMinute", 600.0,
-            "wardsPerMinute", 0.8,
-            "controlWardsPerGame", 3.0,
-            "visionScorePerMinute", 1.2
+    // 실제 통계 기반 티어별 + 포지션별 평균 기준값들
+    private static final Map<String, Map<String, Map<String, Double>>> TIER_POSITION_AVERAGES = Map.of(
+        "IRON", Map.of(
+            "TOP", Map.of("damagePerMinute", 370.0, "wardsPerMinute", 0.47, "controlWardsPerGame", 2.0, "visionScorePerMinute", 0.47),
+            "JUNGLE", Map.of("damagePerMinute", 310.0, "wardsPerMinute", 0.67, "controlWardsPerGame", 2.5, "visionScorePerMinute", 0.67),
+            "MIDDLE", Map.of("damagePerMinute", 400.0, "wardsPerMinute", 0.50, "controlWardsPerGame", 1.8, "visionScorePerMinute", 0.50),
+            "BOTTOM", Map.of("damagePerMinute", 420.0, "wardsPerMinute", 0.37, "controlWardsPerGame", 1.5, "visionScorePerMinute", 0.37),
+            "UTILITY", Map.of("damagePerMinute", 180.0, "wardsPerMinute", 2.5, "controlWardsPerGame", 5.5, "visionScorePerMinute", 1.0)
         ),
-        "JUNGLE", Map.of(
-            "damagePerMinute", 550.0,
-            "wardsPerMinute", 1.2,
-            "controlWardsPerGame", 4.0,
-            "visionScorePerMinute", 1.5
+        "BRONZE", Map.of(
+            "TOP", Map.of("damagePerMinute", 420.0, "wardsPerMinute", 0.57, "controlWardsPerGame", 2.2, "visionScorePerMinute", 0.57),
+            "JUNGLE", Map.of("damagePerMinute", 350.0, "wardsPerMinute", 0.83, "controlWardsPerGame", 3.0, "visionScorePerMinute", 0.83),
+            "MIDDLE", Map.of("damagePerMinute", 450.0, "wardsPerMinute", 0.60, "controlWardsPerGame", 2.0, "visionScorePerMinute", 0.60),
+            "BOTTOM", Map.of("damagePerMinute", 470.0, "wardsPerMinute", 0.47, "controlWardsPerGame", 1.8, "visionScorePerMinute", 0.47),
+            "UTILITY", Map.of("damagePerMinute", 210.0, "wardsPerMinute", 2.7, "controlWardsPerGame", 6.0, "visionScorePerMinute", 1.33)
         ),
-        "MIDDLE", Map.of(
-            "damagePerMinute", 650.0,
-            "wardsPerMinute", 0.6,
-            "controlWardsPerGame", 2.5,
-            "visionScorePerMinute", 1.0
+        "SILVER", Map.of(
+            "TOP", Map.of("damagePerMinute", 470.0, "wardsPerMinute", 0.67, "controlWardsPerGame", 2.5, "visionScorePerMinute", 0.67),
+            "JUNGLE", Map.of("damagePerMinute", 390.0, "wardsPerMinute", 1.0, "controlWardsPerGame", 3.5, "visionScorePerMinute", 1.0),
+            "MIDDLE", Map.of("damagePerMinute", 500.0, "wardsPerMinute", 0.73, "controlWardsPerGame", 2.2, "visionScorePerMinute", 0.73),
+            "BOTTOM", Map.of("damagePerMinute", 520.0, "wardsPerMinute", 0.57, "controlWardsPerGame", 2.0, "visionScorePerMinute", 0.57),
+            "UTILITY", Map.of("damagePerMinute", 240.0, "wardsPerMinute", 2.9, "controlWardsPerGame", 6.5, "visionScorePerMinute", 1.67)
         ),
-        "BOTTOM", Map.of(
-            "damagePerMinute", 700.0,
-            "wardsPerMinute", 0.5,
-            "controlWardsPerGame", 2.0,
-            "visionScorePerMinute", 0.8
+        "GOLD", Map.of(
+            "TOP", Map.of("damagePerMinute", 520.0, "wardsPerMinute", 0.77, "controlWardsPerGame", 2.8, "visionScorePerMinute", 0.77),
+            "JUNGLE", Map.of("damagePerMinute", 430.0, "wardsPerMinute", 1.17, "controlWardsPerGame", 4.0, "visionScorePerMinute", 1.17),
+            "MIDDLE", Map.of("damagePerMinute", 550.0, "wardsPerMinute", 0.87, "controlWardsPerGame", 2.5, "visionScorePerMinute", 0.87),
+            "BOTTOM", Map.of("damagePerMinute", 580.0, "wardsPerMinute", 0.67, "controlWardsPerGame", 2.2, "visionScorePerMinute", 0.67),
+            "UTILITY", Map.of("damagePerMinute", 270.0, "wardsPerMinute", 3.1, "controlWardsPerGame", 7.0, "visionScorePerMinute", 2.0)
         ),
-        "UTILITY", Map.of(
-            "damagePerMinute", 250.0,
-            "wardsPerMinute", 2.0,
-            "controlWardsPerGame", 6.0,
-            "visionScorePerMinute", 2.5
+        "PLATINUM", Map.of(
+            "TOP", Map.of("damagePerMinute", 580.0, "wardsPerMinute", 0.87, "controlWardsPerGame", 3.2, "visionScorePerMinute", 0.87),
+            "JUNGLE", Map.of("damagePerMinute", 480.0, "wardsPerMinute", 1.33, "controlWardsPerGame", 4.5, "visionScorePerMinute", 1.33),
+            "MIDDLE", Map.of("damagePerMinute", 620.0, "wardsPerMinute", 1.0, "controlWardsPerGame", 2.8, "visionScorePerMinute", 1.0),
+            "BOTTOM", Map.of("damagePerMinute", 650.0, "wardsPerMinute", 0.77, "controlWardsPerGame", 2.5, "visionScorePerMinute", 0.77),
+            "UTILITY", Map.of("damagePerMinute", 300.0, "wardsPerMinute", 3.3, "controlWardsPerGame", 7.5, "visionScorePerMinute", 2.33)
+        ),
+        "DIAMOND", Map.of(
+            "TOP", Map.of("damagePerMinute", 650.0, "wardsPerMinute", 1.0, "controlWardsPerGame", 3.8, "visionScorePerMinute", 1.0),
+            "JUNGLE", Map.of("damagePerMinute", 550.0, "wardsPerMinute", 1.5, "controlWardsPerGame", 5.0, "visionScorePerMinute", 1.5),
+            "MIDDLE", Map.of("damagePerMinute", 700.0, "wardsPerMinute", 1.17, "controlWardsPerGame", 3.2, "visionScorePerMinute", 1.17),
+            "BOTTOM", Map.of("damagePerMinute", 750.0, "wardsPerMinute", 0.87, "controlWardsPerGame", 3.0, "visionScorePerMinute", 0.87),
+            "UTILITY", Map.of("damagePerMinute", 350.0, "wardsPerMinute", 3.5, "controlWardsPerGame", 8.0, "visionScorePerMinute", 2.67)
+        ),
+        "MASTER", Map.of(
+            "TOP", Map.of("damagePerMinute", 680.0, "wardsPerMinute", 1.17, "controlWardsPerGame", 4.0, "visionScorePerMinute", 1.17),
+            "JUNGLE", Map.of("damagePerMinute", 580.0, "wardsPerMinute", 1.67, "controlWardsPerGame", 5.5, "visionScorePerMinute", 1.67),
+            "MIDDLE", Map.of("damagePerMinute", 720.0, "wardsPerMinute", 1.33, "controlWardsPerGame", 3.5, "visionScorePerMinute", 1.33),
+            "BOTTOM", Map.of("damagePerMinute", 780.0, "wardsPerMinute", 1.0, "controlWardsPerGame", 3.2, "visionScorePerMinute", 1.0),
+            "UTILITY", Map.of("damagePerMinute", 380.0, "wardsPerMinute", 3.7, "controlWardsPerGame", 8.5, "visionScorePerMinute", 2.8)
+        ),
+        "GRANDMASTER", Map.of(
+            "TOP", Map.of("damagePerMinute", 700.0, "wardsPerMinute", 1.33, "controlWardsPerGame", 4.2, "visionScorePerMinute", 1.33),
+            "JUNGLE", Map.of("damagePerMinute", 600.0, "wardsPerMinute", 1.83, "controlWardsPerGame", 6.0, "visionScorePerMinute", 1.83),
+            "MIDDLE", Map.of("damagePerMinute", 750.0, "wardsPerMinute", 1.5, "controlWardsPerGame", 3.8, "visionScorePerMinute", 1.5),
+            "BOTTOM", Map.of("damagePerMinute", 820.0, "wardsPerMinute", 1.17, "controlWardsPerGame", 3.5, "visionScorePerMinute", 1.17),
+            "UTILITY", Map.of("damagePerMinute", 400.0, "wardsPerMinute", 3.9, "controlWardsPerGame", 9.0, "visionScorePerMinute", 3.0)
+        ),
+        "CHALLENGER", Map.of(
+            "TOP", Map.of("damagePerMinute", 720.0, "wardsPerMinute", 1.5, "controlWardsPerGame", 4.5, "visionScorePerMinute", 1.5),
+            "JUNGLE", Map.of("damagePerMinute", 620.0, "wardsPerMinute", 2.0, "controlWardsPerGame", 6.5, "visionScorePerMinute", 2.0),
+            "MIDDLE", Map.of("damagePerMinute", 780.0, "wardsPerMinute", 1.67, "controlWardsPerGame", 4.0, "visionScorePerMinute", 1.67),
+            "BOTTOM", Map.of("damagePerMinute", 850.0, "wardsPerMinute", 1.33, "controlWardsPerGame", 3.8, "visionScorePerMinute", 1.33),
+            "UTILITY", Map.of("damagePerMinute", 420.0, "wardsPerMinute", 4.1, "controlWardsPerGame", 9.5, "visionScorePerMinute", 3.2)
         )
     );
     
+    // 기본 기준값 (티어 정보가 없을 때 사용, GOLD 기준)
+    private static final Map<String, Map<String, Double>> DEFAULT_POSITION_AVERAGES = 
+        TIER_POSITION_AVERAGES.get("GOLD");
+    
     /**
-     * 컨텍스트 기반 종합 분석 수행
+     * 컨텍스트 기반 종합 분석 수행 (티어 정보 포함)
      */
-    public Map<String, Object> performContextualAnalysis(InfoDto gameInfo, ParticipantDto targetPlayer, String position) {
+    public Map<String, Object> performContextualAnalysis(InfoDto gameInfo, ParticipantDto targetPlayer, String position, String tier) {
         Map<String, Object> analysis = new HashMap<>();
         
         double gameDurationMinutes = gameInfo.getGameDuration() / 60.0;
         boolean gameWon = targetPlayer.isWin();
         
-        // 1. 피해량 효율성 분석
-        Map<String, Object> damageAnalysis = analyzeDamageEfficiency(targetPlayer, position, gameDurationMinutes);
+        // 1. 피해량 효율성 분석 (티어 기준 적용)
+        Map<String, Object> damageAnalysis = analyzeDamageEfficiency(targetPlayer, position, gameDurationMinutes, tier);
         
-        // 2. 시야 기여도 분석  
-        Map<String, Object> visionAnalysis = analyzeVisionContribution(targetPlayer, position, gameDurationMinutes);
+        // 2. 시야 기여도 분석 (티어 기준 적용)
+        Map<String, Object> visionAnalysis = analyzeVisionContribution(targetPlayer, position, gameDurationMinutes, tier);
         
         // 3. 커뮤니케이션 분석
         Map<String, Object> communicationAnalysis = analyzeCommunicationPatterns(targetPlayer, gameDurationMinutes);
         
-        // 4. 경제 효율성 분석
-        Map<String, Object> economicAnalysis = analyzeEconomicEfficiency(targetPlayer, position, gameDurationMinutes);
+        // 4. 경제 효율성 분석 (티어 기준 적용)
+        Map<String, Object> economicAnalysis = analyzeEconomicEfficiency(targetPlayer, position, gameDurationMinutes, tier);
         
         // 5. 게임 상황별 퍼포먼스
         Map<String, Object> situationalAnalysis = analyzeSituationalPerformance(targetPlayer, gameWon, gameDurationMinutes);
@@ -75,7 +112,8 @@ public class ContextualAnalyzer {
             "gameDurationMinutes", Math.round(gameDurationMinutes * 10.0) / 10.0,
             "gamePhase", determineGamePhase(gameDurationMinutes),
             "gameResult", gameWon ? "승리" : "패배",
-            "position", position
+            "position", position,
+            "tier", tier != null ? tier : "UNRANKED"
         ));
         
         analysis.put("damageAnalysis", damageAnalysis);
@@ -91,9 +129,33 @@ public class ContextualAnalyzer {
     }
     
     /**
-     * 피해량 효율성 분석
+     * 하위 호환성을 위한 오버로드 메서드 (티어 정보 없음)
      */
-    private Map<String, Object> analyzeDamageEfficiency(ParticipantDto player, String position, double gameDurationMinutes) {
+    public Map<String, Object> performContextualAnalysis(InfoDto gameInfo, ParticipantDto targetPlayer, String position) {
+        return performContextualAnalysis(gameInfo, targetPlayer, position, null);
+    }
+    
+    /**
+     * 티어별 기준값 가져오기
+     */
+    private Map<String, Double> getPositionAverages(String position, String tier) {
+        // tier가 null이거나 빈 문자열인 경우 기본값 사용
+        if (tier == null || tier.trim().isEmpty()) {
+            return DEFAULT_POSITION_AVERAGES.getOrDefault(position, DEFAULT_POSITION_AVERAGES.get("MIDDLE"));
+        }
+        
+        Map<String, Map<String, Double>> tierAverages = TIER_POSITION_AVERAGES.get(tier.toUpperCase());
+        if (tierAverages != null && tierAverages.containsKey(position)) {
+            return tierAverages.get(position);
+        }
+        // 티어 정보가 없거나 잘못된 경우 기본값 사용
+        return DEFAULT_POSITION_AVERAGES.getOrDefault(position, DEFAULT_POSITION_AVERAGES.get("MIDDLE"));
+    }
+
+    /**
+     * 피해량 효율성 분석 (티어 정보 포함)
+     */
+    private Map<String, Object> analyzeDamageEfficiency(ParticipantDto player, String position, double gameDurationMinutes, String tier) {
         Map<String, Object> analysis = new HashMap<>();
         
         double totalDamage = player.getTotalDamageDealtToChampions();
@@ -104,8 +166,9 @@ public class ContextualAnalyzer {
         // 분당 피해량
         double damagePerMinute = totalDamage / gameDurationMinutes;
         
-        // 포지션 대비 효율성
-        double expectedDPM = POSITION_AVERAGES.getOrDefault(position, Map.of("damagePerMinute", 500.0)).get("damagePerMinute");
+        // 티어별 포지션 대비 효율성
+        Map<String, Double> positionAverages = getPositionAverages(position, tier);
+        double expectedDPM = positionAverages.get("damagePerMinute");
         double damageEfficiency = (damagePerMinute / expectedDPM) * 100;
         
         // 피해 구성 분석
@@ -125,9 +188,9 @@ public class ContextualAnalyzer {
     }
     
     /**
-     * 시야 기여도 분석
+     * 시야 기여도 분석 (티어 정보 포함)
      */
-    private Map<String, Object> analyzeVisionContribution(ParticipantDto player, String position, double gameDurationMinutes) {
+    private Map<String, Object> analyzeVisionContribution(ParticipantDto player, String position, double gameDurationMinutes, String tier) {
         Map<String, Object> analysis = new HashMap<>();
         
         int wardsPlaced = player.getWardsPlaced();
@@ -139,12 +202,8 @@ public class ContextualAnalyzer {
         double wardsPerMinute = wardsPlaced / gameDurationMinutes;
         double visionScorePerMinute = visionScore / gameDurationMinutes;
         
-        // 포지션 대비 평가
-        Map<String, Double> positionAverages = POSITION_AVERAGES.getOrDefault(position, Map.of(
-            "wardsPerMinute", 1.0,
-            "controlWardsPerGame", 3.0,
-            "visionScorePerMinute", 1.2
-        ));
+        // 티어별 포지션 대비 평가
+        Map<String, Double> positionAverages = getPositionAverages(position, tier);
         
         double wardEfficiency = (wardsPerMinute / positionAverages.get("wardsPerMinute")) * 100;
         double controlWardEfficiency = (controlWards / positionAverages.get("controlWardsPerGame")) * 100;
@@ -204,9 +263,9 @@ public class ContextualAnalyzer {
     }
     
     /**
-     * 경제 효율성 분석
+     * 경제 효율성 분석 (티어 정보 포함)
      */
-    private Map<String, Object> analyzeEconomicEfficiency(ParticipantDto player, String position, double gameDurationMinutes) {
+    private Map<String, Object> analyzeEconomicEfficiency(ParticipantDto player, String position, double gameDurationMinutes, String tier) {
         Map<String, Object> analysis = new HashMap<>();
         
         int goldEarned = player.getGoldEarned();
@@ -388,5 +447,18 @@ public class ContextualAnalyzer {
         else if (score >= 70) return "B";
         else if (score >= 60) return "C";
         else return "D";
+    }
+    
+    // 하위 호환성을 위한 오버로드 메서드들
+    private Map<String, Object> analyzeDamageEfficiency(ParticipantDto player, String position, double gameDurationMinutes) {
+        return analyzeDamageEfficiency(player, position, gameDurationMinutes, null);
+    }
+    
+    private Map<String, Object> analyzeVisionContribution(ParticipantDto player, String position, double gameDurationMinutes) {
+        return analyzeVisionContribution(player, position, gameDurationMinutes, null);
+    }
+    
+    private Map<String, Object> analyzeEconomicEfficiency(ParticipantDto player, String position, double gameDurationMinutes) {
+        return analyzeEconomicEfficiency(player, position, gameDurationMinutes, null);
     }
 }

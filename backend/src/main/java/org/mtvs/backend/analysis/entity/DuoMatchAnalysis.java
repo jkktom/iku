@@ -10,10 +10,7 @@ import java.util.Map;
 
 @Entity
 @Table(name = "duo_match_analysis")
-public class DuoMatchAnalysis {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class DuoMatchAnalysis extends BaseAnalysis {
 
     @Column(name = "match_id", nullable = false)
     private String matchId;
@@ -40,26 +37,12 @@ public class DuoMatchAnalysis {
     @Column(name = "comparison_result", columnDefinition = "jsonb")
     private Map<String, Object> comparisonResult;
 
-    @Column(name = "analysis_summary", columnDefinition = "text")
-    private String analysisSummary;
-
-    @Column(name = "analysis_status")
-    @Enumerated(EnumType.STRING)
-    private AnalysisStatus analysisStatus;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     public DuoMatchAnalysis() {
-        this.createdAt = LocalDateTime.now();
-        this.analysisStatus = AnalysisStatus.REQUESTED;
+        super();
     }
 
-    public DuoMatchAnalysis(Long id, String matchId, String player1Puuid, String player2Puuid, String player1Name, String player2Name, String player1Champion, String player2Champion, Map<String, Object> comparisonResult, String analysisSummary, AnalysisStatus analysisStatus, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.id = id;
+    public DuoMatchAnalysis(String matchId, String player1Puuid, String player2Puuid, String player1Name, String player2Name, String player1Champion, String player2Champion, Map<String, Object> comparisonResult) {
+        super();
         this.matchId = matchId;
         this.player1Puuid = player1Puuid;
         this.player2Puuid = player2Puuid;
@@ -68,18 +51,6 @@ public class DuoMatchAnalysis {
         this.player1Champion = player1Champion;
         this.player2Champion = player2Champion;
         this.comparisonResult = comparisonResult;
-        this.analysisSummary = analysisSummary;
-        this.analysisStatus = analysisStatus;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public String getMatchId() {
@@ -144,40 +115,6 @@ public class DuoMatchAnalysis {
 
     public void setComparisonResult(Map<String, Object> comparisonResult) {
         this.comparisonResult = comparisonResult;
-    }
-
-    public String getAnalysisSummary() {
-        return analysisSummary;
-    }
-
-    public void setAnalysisSummary(String analysisSummary) {
-
-        this.analysisSummary = analysisSummary;
         this.updatedAt = LocalDateTime.now();
-    }
-
-    public AnalysisStatus getAnalysisStatus() {
-        return analysisStatus;
-    }
-
-    public void setAnalysisStatus(AnalysisStatus analysisStatus) {
-        this.analysisStatus = analysisStatus;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }

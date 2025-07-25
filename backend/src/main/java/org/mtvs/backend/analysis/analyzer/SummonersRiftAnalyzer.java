@@ -55,7 +55,15 @@ public class SummonersRiftAnalyzer implements MapAnalyzer {
         
         Map<String, Object> previousPosition = null;
         
+        // 15분(900초 = 900,000밀리초) 이후의 프레임은 제외
+        final long FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+        
         for (FrameDto frame : matchTimeline.getInfo().getFrames()) {
+            // 15분 이후의 프레임은 분석에서 제외
+            if (frame.getTimestamp() > FIFTEEN_MINUTES_MS) {
+                break;
+            }
+            
             if (frame.getParticipantFrames() != null && 
                 frame.getParticipantFrames().containsKey(String.valueOf(participantId))) {
                 

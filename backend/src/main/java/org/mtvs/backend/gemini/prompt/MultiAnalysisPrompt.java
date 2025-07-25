@@ -11,7 +11,7 @@ public class MultiAnalysisPrompt {
     /**
      * 다중 매치 종합 분석용 프롬프트 생성
      */
-    public String createPrompt(List<Map<String, Object>> allMatchData, String gameName, String tagLine) {
+    public String createPrompt(List<Map<String, Object>> allMatchData, String gameName, String tagLine, Map<String, Object> riotUserInfo) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("당신은 리그 오브 레전드 데이터를 분석하여 플레이어의 잠재력을 최대로 끌어올리는 세계 최고의 AI 코치입니다. ");
         prompt.append("당신의 목표는 단순히 KDA나 승률 같은 표면적인 데이터를 나열하는 것이 아니라, 플레이어의 위치 데이터와 게임 내 이벤트를 유기적으로 결합하여, ");
@@ -46,6 +46,33 @@ public class MultiAnalysisPrompt {
 
         prompt.append("=== 플레이어 정보 ===\n");
         prompt.append("소환사명: ").append(gameName).append("#").append(tagLine).append("\n");
+        
+        // 랭크 티어 정보 추가
+        if (riotUserInfo != null) {
+            String soloTier = (String) riotUserInfo.get("soloTier");
+            String soloRank = (String) riotUserInfo.get("soloRankDivision");
+            String flexTier = (String) riotUserInfo.get("flexTier");
+            String flexRank = (String) riotUserInfo.get("flexRankDivision");
+            
+            prompt.append("솔로 랭크: ");
+            if (soloTier != null && soloRank != null) {
+                prompt.append(soloTier).append(" ").append(soloRank);
+            } else {
+                prompt.append("언랭크");
+            }
+            prompt.append("\n");
+            
+            prompt.append("자유 랭크: ");
+            if (flexTier != null && flexRank != null) {
+                prompt.append(flexTier).append(" ").append(flexRank);
+            } else {
+                prompt.append("언랭크");
+            }
+            prompt.append("\n");
+        } else {
+            prompt.append("랭크 정보: 알 수 없음\n");
+        }
+        
         prompt.append("분석 대상: 최근 ").append(allMatchData.size()).append("게임의 종합 성과\n\n");
 
         // 각 게임별 요약 정보
@@ -128,8 +155,10 @@ public class MultiAnalysisPrompt {
                     String description = (String) event.get("description");
 
                     // 사망 이벤트 강조
-                    if ("사망".equals(description) || description.contains("사망")) {
-                        prompt.append("  ⚠️  ").append(timeMinutes).append(" - **사망 이벤트** (중요 분석 대상)\n");
+                    if ("사망".equals(description) || description.contains("사망") || description.contains("데스")) {
+                        prompt.append("    ").append(timeMinutes).append(" - 데스 (").append(description.replaceAll("데스 \\((.*)\\)", "$1")).append(")\n");
+                    } else if (description.contains("킬 획득")) {
+                        prompt.append("    ").append(timeMinutes).append(" - ").append(description).append("\n");
                     } else {
                         prompt.append("    ").append(timeMinutes).append(" - ").append(description).append("\n");
                     }
@@ -157,23 +186,41 @@ public class MultiAnalysisPrompt {
             prompt.append("\n");
         }
 
-        // 새로운 분석 프레임워크 요청
-        prompt.append("=== 분석 요청: 5단계 심층 분석 수행 ===\n");
+        // 티어별 맞춤 분석 프레임워크 요청
+        prompt.append("=== 분석 요청: 티어별 맞춤 5단계 심층 분석 수행 ===\n");
+        prompt.append("**중요: 플레이어의 현재 티어 수준을 반영한 분석을 수행하십시오.**\n\n");
+        
+        // 티어별 분석 지침 추가
+        if (riotUserInfo != null) {
+            String soloTier = (String) riotUserInfo.get("soloTier");
+            if (soloTier != null) {
+                prompt.append("**이 플레이어는 ").append(soloTier).append(" 티어입니다. 따라서:**\n");
+                prompt.append("- 해당 티어에서 기대되는 플레이 수준과 비교하여 분석하십시오\n");
+                prompt.append("- 다음 티어로 승급하기 위해 필요한 구체적인 개선점을 제시하십시오\n");
+                prompt.append("- 이 티어에서 흔히 발생하는 실수 패턴과 비교하여 평가하십시오\n\n");
+            }
+        }
+        
         prompt.append("위에서 제시한 3단계 분석 프레임워크에 이어서 다음을 수행하십시오:\n\n");
 
-        prompt.append("**4단계: '패턴 기반 행동 개선안' 도출 (Derive Pattern-Based Action Plans)**\n");
-        prompt.append("3단계에서 파악한 심리적 패턴을 기반으로, 구체적이고 즉시 실행 가능한 행동 개선안을 제시하십시오.\n");
-        prompt.append("• 개선안 예시: '솔로 킬 후 15초간 반드시 미니맵을 확인하고, 적 정글러가 보이지 않으면 즉시 후퇴'\n");
-        prompt.append("• 각 개선안에는 '언제', '어떻게', '왜'를 명확히 포함하십시오.\n\n");
+        prompt.append("**4단계: '티어별 맞춤 행동 개선안' 도출 (Tier-Specific Action Plans)**\n");
+        prompt.append("3단계에서 파악한 심리적 패턴과 현재 티어 수준을 기반으로, 구체적이고 즉시 실행 가능한 행동 개선안을 제시하십시오.\n");
+        prompt.append("• 개선안은 플레이어의 현재 티어에서 다음 티어로 승급하는데 도움이 되는 것으로 제한하십시오\n");
+        prompt.append("• 각 개선안에는 '언제', '어떻게', '왜', 그리고 '이 티어에서 왜 중요한지'를 명확히 포함하십시오\n");
+        prompt.append("• 예시: 'GOLD 티어에서 PLATINUM으로 승급하려면, 솔로 킬 후 15초간 반드시 미니맵을 확인하고, 적 정글러가 보이지 않으면 즉시 후퇴 (GOLD에서는 갱킹 타이밍 예측이 부족하기 때문)'\n\n");
 
-        prompt.append("**5단계: '성장 로드맵' 제시 (Present Growth Roadmap)**\n");
-        prompt.append("플레이어의 현재 수준을 정확히 평가하고, 단계별 성장 목표를 제시하십시오.\n");
-        prompt.append("• 현재 실력 등급 (Bronze ~ Challenger 기준)\n");
-        prompt.append("• 다음 10게임에서 집중할 핵심 3가지\n");
-        prompt.append("• 1개월 후 달성 가능한 구체적 목표 (KDA, 승률, 특정 스킬 개선 등)\n\n");
+        prompt.append("**5단계: '티어별 성장 로드맵' 제시 (Tier-Based Growth Roadmap)**\n");
+        prompt.append("플레이어의 현재 티어를 기준으로 정확한 성장 목표를 제시하십시오.\n");
+//        prompt.append("• 현재 티어에서의 실력 평가 (상위/중위/하위 구간)\n");
+//        prompt.append("• 다음 티어로 승급하기 위한 핵심 3가지 개선 영역\n");
+        prompt.append("• 주로 플레이하는 포지션과 챔피언들에 특화된 개선 방안\n");
+        prompt.append("• 1개월 후 달성 가능한 구체적 목표 (승률, KDA, 특정 스킬 개선 등)\n\n");
 
-        prompt.append("**중요: 반드시 사망 이벤트를 중심으로 한 위치 기반 분석을 우선시하고, **");
-        prompt.append("표면적인 통계보다는 '왜 그런 플레이를 했는가'에 대한 심층적 통찰을 제공하십시오.**");
+        prompt.append("**최종 중요사항:**\n");
+        prompt.append("1. 반드시 사망 이벤트를 중심으로 한 위치 기반 분석을 우선시하십시오\n");
+        prompt.append("2. 표면적인 통계보다는 '왜 그런 플레이를 했는가'에 대한 심층적 통찰을 제공하십시오\n");
+        prompt.append("3. 모든 조언은 플레이어의 현재 티어 수준에 맞는 실현 가능한 것으로 제한하십시오\n");
+        prompt.append("4. 각 포지션별, 챔피언별 특성을 고려한 맞춤형 분석을 제공하십시오");
 
         return prompt.toString();
     }

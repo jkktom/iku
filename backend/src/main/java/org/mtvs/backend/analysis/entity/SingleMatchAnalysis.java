@@ -10,20 +10,10 @@ import java.util.Map;
 @Entity
 @Table(name = "single_match_analysis",
        uniqueConstraints = {@UniqueConstraint(columnNames = {"puuid", "match_id"})})
-public class SingleMatchAnalysis {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @Column(name = "puuid", nullable = false, length = 78)
-    private String puuid;
+public class SingleMatchAnalysis extends BaseAnalysis {
     
     @Column(name = "match_id", nullable = true, length = 20)
     private String matchId;
-    
-    @Column(name = "target_player_name", length = 50)
-    private String targetPlayerName;
     
     @Column(name = "target_champion", length = 30)
     private String targetChampion;
@@ -33,62 +23,22 @@ public class SingleMatchAnalysis {
     
     @Column(name = "game_mode", length = 30)
     private String gameMode;
-    
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "ai_request_data", columnDefinition = "jsonb")
-    private Map<String, Object> aiRequestData;
-    
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "ai_response_data", columnDefinition = "jsonb")
-    private Map<String, Object> aiResponseData;
-    
-    @Column(name = "analysis_summary", columnDefinition = "text")
-    private String analysisSummary;
-    
-    @Column(name = "analysis_status", length = 20)
-    @Enumerated(EnumType.STRING)
-    private AnalysisStatus analysisStatus;
-    
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-    
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-    
-    @Column(name = "error_message", columnDefinition = "text")
-    private String errorMessage;
 
     // 기본 생성자
     public SingleMatchAnalysis() {
-        this.createdAt = LocalDateTime.now();
-        this.analysisStatus = AnalysisStatus.REQUESTED;
+        super();
     }
 
     // 생성자
     public SingleMatchAnalysis(String puuid, String matchId, String targetPlayerName, String targetChampion) {
-        this();
-        this.puuid = puuid;
-        this.matchId = matchId;
-        this.targetPlayerName = targetPlayerName;
-        this.targetChampion = targetChampion;
+        super();
+        setPuuid(puuid);
+        setMatchId(matchId);
+        setTargetPlayerName(targetPlayerName);
+        setTargetChampion(targetChampion);
     }
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getPuuid() {
-        return puuid;
-    }
-
-    public void setPuuid(String puuid) {
-        this.puuid = puuid;
-    }
+    // Specific Getters and Setters (inherited methods are in BaseAnalysis)
 
     public String getMatchId() {
         return matchId;
@@ -98,13 +48,6 @@ public class SingleMatchAnalysis {
         this.matchId = matchId;
     }
 
-    public String getTargetPlayerName() {
-        return targetPlayerName;
-    }
-
-    public void setTargetPlayerName(String targetPlayerName) {
-        this.targetPlayerName = targetPlayerName;
-    }
 
     public String getTargetChampion() {
         return targetChampion;
@@ -130,72 +73,4 @@ public class SingleMatchAnalysis {
         this.gameMode = gameMode;
     }
 
-    public Map<String, Object> getAiRequestData() {
-        return aiRequestData;
-    }
-
-    public void setAiRequestData(Map<String, Object> aiRequestData) {
-        this.aiRequestData = aiRequestData;
-    }
-
-    public Map<String, Object> getAiResponseData() {
-        return aiResponseData;
-    }
-
-    public void setAiResponseData(Map<String, Object> aiResponseData) {
-        this.aiResponseData = aiResponseData;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    public String getAnalysisSummary() {
-        return analysisSummary;
-    }
-
-    public void setAnalysisSummary(String analysisSummary) {
-        this.analysisSummary = analysisSummary;
-    }
-
-    public AnalysisStatus getAnalysisStatus() {
-        return analysisStatus;
-    }
-
-    public void setAnalysisStatus(AnalysisStatus analysisStatus) {
-        this.analysisStatus = analysisStatus;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
 }

@@ -25,28 +25,21 @@ import java.util.Arrays;
 
 @Service
 @Transactional
-public class SingleMatchAnalysisService {
+public class SingleMatchAnalysisService extends BaseAnalysisService<SingleMatchAnalysis, SingleMatchAnalysisRepository> {
 
     private static final Logger logger = LoggerFactory.getLogger(SingleMatchAnalysisService.class);
-    
-    private final SingleMatchAnalysisRepository singleMatchAnalysisRepository;
-    private final GameAnalysisService gameAnalysisService;
-    private final RiotService riotService;
-    private final ObjectMapper objectMapper;
+
     private final ContextualAnalyzer contextualAnalyzer;
     private final LaneOpponentDetector laneOpponentDetector;
 
     @Autowired
-    public SingleMatchAnalysisService(SingleMatchAnalysisRepository singleMatchAnalysisRepository,
+    public SingleMatchAnalysisService(SingleMatchAnalysisRepository repository,
                                      GameAnalysisService gameAnalysisService,
                                      RiotService riotService,
                                      ObjectMapper objectMapper,
                                      ContextualAnalyzer contextualAnalyzer,
                                      LaneOpponentDetector laneOpponentDetector) {
-        this.singleMatchAnalysisRepository = singleMatchAnalysisRepository;
-        this.gameAnalysisService = gameAnalysisService;
-        this.riotService = riotService;
-        this.objectMapper = objectMapper;
+        super(repository, gameAnalysisService, riotService, objectMapper, logger);
         this.contextualAnalyzer = contextualAnalyzer;
         this.laneOpponentDetector = laneOpponentDetector;
     }
@@ -63,7 +56,7 @@ public class SingleMatchAnalysisService {
         analysis.setTargetPlayerName(account.getGameName() + "#" + account.getTagLine());
         analysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
         
-        return singleMatchAnalysisRepository.save(analysis);
+        return repository.save(analysis);
     }
 
     /**
@@ -80,13 +73,13 @@ public class SingleMatchAnalysisService {
 
         // 중복 분석 방지
 
-        if (singleMatchAnalysisRepository.existsByPuuidAndMatchId(puuid, matchId)) {
+        if (repository.existsByPuuidAndMatchId(puuid, matchId)) {
             throw new IllegalArgumentException("해당 매치는 이미 분석이 요청되었습니다.");
         }
 
         // 가장 최근 REQUESTED 상태의 레코드 찾기
 
-        List<SingleMatchAnalysis> requestedAnalyses = singleMatchAnalysisRepository
+        List<SingleMatchAnalysis> requestedAnalyses = repository
 
                 .findByAnalysisStatusOrderByCreatedAtDesc(AnalysisStatus.REQUESTED);
 
@@ -97,7 +90,7 @@ public class SingleMatchAnalysisService {
                 .orElseThrow(() -> new IllegalArgumentException("분석 요청 레코드를 찾을 수 없습니다."));
         analysis.setMatchId(matchId);
 
-        return singleMatchAnalysisRepository.save(analysis);
+        return repository.save(analysis);
 
     }
 
@@ -108,7 +101,7 @@ public class SingleMatchAnalysisService {
         logger.info("Performing AI analysis for puuid: {}, matchId: {}", puuid, matchId);
         
         // 레코드가 없으면 새로 생성
-        SingleMatchAnalysis analysis = singleMatchAnalysisRepository.findByPuuidAndMatchId(puuid, matchId)
+        SingleMatchAnalysis analysis = repository.findByPuuidAndMatchId(puuid, matchId)
                 .orElseGet(() -> {
                     logger.info("No existing record found, creating new analysis record for puuid: {}, matchId: {}", puuid, matchId);
                     SingleMatchAnalysis newAnalysis = new SingleMatchAnalysis();
@@ -116,12 +109,12 @@ public class SingleMatchAnalysisService {
                     newAnalysis.setMatchId(matchId);
                     newAnalysis.setTargetPlayerName("Temporary"); // 임시값, 나중에 매치 데이터에서 업데이트
                     newAnalysis.setAnalysisStatus(AnalysisStatus.REQUESTED);
-                    return singleMatchAnalysisRepository.save(newAnalysis);
+                    return repository.save(newAnalysis);
                 });
         
         try {
             analysis.setAnalysisStatus(AnalysisStatus.PROCESSING);
-            singleMatchAnalysisRepository.save(analysis);
+            repository.save(analysis);
             
             // Riot API에서 매치 상세 정보 가져오기
             MatchDetailDto matchDetail = riotService.getMatchDetail(matchId);
@@ -166,7 +159,7 @@ public class SingleMatchAnalysisService {
             );
             
             // AI 분석 수행
-            Map<String, Object> aiRequest = buildAIRequestData(matchDetail, matchTimeline, puuid, matchId);
+            Map<String, Object> aiRequest = buildMatchSpecificAIRequestData(matchDetail, matchTimeline, puuid, matchId);
             analysis.setAiRequestData(aiRequest);
             
             // GameAnalysisService의 analyzePlayerMatch 메서드 사용
@@ -191,7 +184,7 @@ public class SingleMatchAnalysisService {
             analysis.setAnalysisSummary(aiResponse);
             analysis.setAnalysisStatus(AnalysisStatus.COMPLETED);
             
-            SingleMatchAnalysis savedAnalysis = singleMatchAnalysisRepository.save(analysis);
+            SingleMatchAnalysis savedAnalysis = repository.save(analysis);
             
             return buildResponseData(savedAnalysis);
             
@@ -199,19 +192,19 @@ public class SingleMatchAnalysisService {
             logger.error("AI analysis failed for puuid: {}, matchId: {}", puuid, matchId, e);
             analysis.setAnalysisStatus(AnalysisStatus.FAILED);
             analysis.setErrorMessage(e.getMessage());
-            singleMatchAnalysisRepository.save(analysis);
+            repository.save(analysis);
             throw e;
         }
     }
 
     /**
-     * AI 요청 데이터 구성
+     * SingleMatchAnalysis용 AI 요청 데이터 구성
      */
-    private Map<String, Object> buildAIRequestData(MatchDetailDto matchDetail, MatchTimelineDto matchTimeline, String puuid, String matchId) {
-        Map<String, Object> requestData = new HashMap<>();
+    private Map<String, Object> buildMatchSpecificAIRequestData(MatchDetailDto matchDetail, MatchTimelineDto matchTimeline, String puuid, String matchId) {
+        Map<String, Object> requestData = buildBaseAIRequestData(puuid);
         
         if (matchDetail != null) {
-            requestData.put("matchId", matchId); // matchId는 메서드 매개변수에서 가져옴
+            requestData.put("matchId", matchId);
             requestData.put("gameDuration", matchDetail.getInfo().getGameDuration());
             requestData.put("gameMode", matchDetail.getInfo().getGameMode());
             requestData.put("participantCount", matchDetail.getInfo().getParticipants().size());
@@ -221,69 +214,17 @@ public class SingleMatchAnalysisService {
             requestData.put("timelineFrameCount", matchTimeline.getInfo().getFrames().size());
         }
         
-        requestData.put("targetPuuid", puuid);
-        requestData.put("requestedAt", System.currentTimeMillis());
-        
         return requestData;
     }
 
-    /**
-     * 응답 데이터 구성
-     */
-    private Map<String, Object> buildResponseData(SingleMatchAnalysis analysis) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", analysis.getId());
-        response.put("puuid", analysis.getPuuid());
-        response.put("matchId", analysis.getMatchId());
-        response.put("targetPlayerName", analysis.getTargetPlayerName());
-        response.put("targetChampion", analysis.getTargetChampion());
-        response.put("matchDuration", analysis.getMatchDuration());
-        response.put("gameMode", analysis.getGameMode());
-        response.put("status", analysis.getAnalysisStatus().name());
-        response.put("analysisSummary", analysis.getAnalysisSummary());
-        response.put("updatedAt", analysis.getUpdatedAt());
-        response.put("aiResponseData", analysis.getAiResponseData());
-        
-        return response;
-    }
 
-    // 조회 메서드들
-    public List<SingleMatchAnalysis> getAnalysisByPuuid(String puuid) {
-        return singleMatchAnalysisRepository.findByPuuidOrderByCreatedAtDesc(puuid);
-    }
-
+    // SingleMatchAnalysis 특화 조회 메서드들
     public Optional<SingleMatchAnalysis> getAnalysisByPuuidAndMatchId(String puuid, String matchId) {
-        return singleMatchAnalysisRepository.findByPuuidAndMatchId(puuid, matchId);
-    }
-
-    public List<SingleMatchAnalysis> getAnalysisByStatus(AnalysisStatus status) {
-        return singleMatchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status);
-    }
-
-    public List<SingleMatchAnalysis> getAnalysisByStatusWithPaging(AnalysisStatus status, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return singleMatchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status, pageable).getContent();
+        return repository.findByPuuidAndMatchId(puuid, matchId);
     }
 
     public List<SingleMatchAnalysis> getAnalysisByMatchId(String matchId) {
-        return singleMatchAnalysisRepository.findByMatchIdOrderByCreatedAtDesc(matchId);
-    }
-
-    public long getTotalCount() {
-        return singleMatchAnalysisRepository.count();
-    }
-
-    public long getCompletedCount() {
-        return singleMatchAnalysisRepository.countByAnalysisStatus(AnalysisStatus.COMPLETED);
-    }
-
-    public List<SingleMatchAnalysis> getPendingAnalysis() {
-        return singleMatchAnalysisRepository.findByAnalysisStatusInOrderByCreatedAtAsc(
-                Arrays.asList(AnalysisStatus.REQUESTED, AnalysisStatus.PROCESSING));
-    }
-
-    public List<SingleMatchAnalysis> getFailedAnalysis() {
-        return singleMatchAnalysisRepository.findByAnalysisStatusOrderByUpdatedAtDesc(AnalysisStatus.FAILED);
+        return repository.findByMatchIdOrderByCreatedAtDesc(matchId);
     }
     
     /**
@@ -319,6 +260,44 @@ public class SingleMatchAnalysisService {
         } catch (Exception e) {
             logger.warn("포지션 결정 중 오류 발생: {}", e.getMessage());
             return "UNKNOWN";
+        }
+    }
+    
+    // BaseAnalysisService 추상 메서드 구현
+    @Override
+    protected SingleMatchAnalysis createNewAnalysis() {
+        return new SingleMatchAnalysis();
+    }
+    
+    @Override
+    protected Map<String, Object> buildSpecificResponseData(SingleMatchAnalysis analysis) {
+        Map<String, Object> specificData = new HashMap<>();
+        specificData.put("matchId", analysis.getMatchId());
+        specificData.put("targetChampion", analysis.getTargetChampion());
+        specificData.put("matchDuration", analysis.getMatchDuration());
+        specificData.put("gameMode", analysis.getGameMode());
+        
+        if (analysis.getMatchDuration() != null) {
+            specificData.put("matchDurationMinutes", Math.round(analysis.getMatchDuration() / 60.0 * 10.0) / 10.0);
+        }
+        
+        return specificData;
+    }
+    
+    @Override
+    protected String getAnalysisType() {
+        return "SINGLE_MATCH";
+    }
+    
+    @Override
+    protected void validateSpecificRequirements(SingleMatchAnalysis analysis) {
+        if (analysis.getMatchId() == null || analysis.getMatchId().trim().isEmpty()) {
+            throw new IllegalArgumentException("매치 ID는 필수입니다.");
+        }
+        
+        // 중복 분석 확인
+        if (repository.existsByPuuidAndMatchId(analysis.getPuuid(), analysis.getMatchId())) {
+            throw new IllegalArgumentException("해당 매치는 이미 분석이 요청되었습니다.");
         }
     }
 }
