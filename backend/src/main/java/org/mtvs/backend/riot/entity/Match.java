@@ -15,6 +15,7 @@ public class Match {
     private String gameMode; //게임 모드
     private String gameVersion; //게임 버전
     private int queueId; //게임 타입 큐 ID
+    private int mapId; //맵 ID (11=소환사의 협곡, 12=칼바람 나락)
 
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Participant> participants;
@@ -25,12 +26,13 @@ public class Match {
     public Match() {
     }
 
-    public Match(String matchId, long gameDuration, String gameMode, String gameVersion, int queueId, List<Participant> participants, List<MatchTimeline> matchTimelines) {
+    public Match(String matchId, long gameDuration, String gameMode, String gameVersion, int queueId, int mapId, List<Participant> participants, List<MatchTimeline> matchTimelines) {
         this.matchId = matchId;
         this.gameDuration = gameDuration;
         this.gameMode = gameMode;
         this.gameVersion = gameVersion;
         this.queueId = queueId;
+        this.mapId = mapId;
         this.participants = participants;
         this.matchTimelines = matchTimelines;
     }
@@ -75,6 +77,13 @@ public class Match {
         this.queueId = queueId;
     }
 
+    public int getMapId() {
+        return mapId;
+    }
+
+    public void setMapId(int mapId) {
+        this.mapId = mapId;
+    }
 
     public List<Participant> getParticipants() {
         return participants;

@@ -1,15 +1,32 @@
 server:
   port: ${SERVER_PORT:8080}
+  tomcat:
+    uri-encoding: UTF-8
+    relaxed-query-chars: " "
+  servlet:
+    encoding:
+      enabled: true
+      charset: UTF-8
+      force: false
 
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  output:
+    ansi:
+      enabled: ALWAYS
+
+  # HTTP 클라이언트 전역 타임아웃 설정 (추가)
+  http:
+    client:
+      connect-timeout: 10s
+      read-timeout: 300s
 
   dotenv:
     location: .env
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://db:5432/iku-ai-db-dev}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/iku-ai-db}
     username: ${DB_USERNAME:user}
     password: ${DB_PASSWORD:5656}
     driver-class-name: org.postgresql.Driver
@@ -19,6 +36,20 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+
+  # Redis 설정
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      database: ${REDIS_DATABASE:0}
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
 
   jpa:
     hibernate:

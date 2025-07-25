@@ -35,12 +35,16 @@ services:
       - DB_USERNAME=user
       - DB_PASSWORD=5656
       - SERVER_PORT=8080
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
     env_file:
       - backend/.env
     ports:
       - "8080:8080"
     depends_on:
       db-main:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - iku-main-network
@@ -111,12 +115,16 @@ services:
       - SERVER_PORT=8080
       - SHOW_SQL=true
       - LOG_LEVEL_APP=DEBUG
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
     env_file:
       - backend/.env
     ports:
       - "8081:8080"
     depends_on:
       db-dev:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - ./backend/src:/app/src:ro  # 소스 코드 핫 리로드
@@ -168,6 +176,26 @@ services:
     restart: unless-stopped
 
   # ======================
+  # Redis (캐시 서버)
+  # ======================
+  redis:
+    image: redis:7-alpine
+    container_name: iku-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - iku-main-network
+      - iku-dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ======================
   # 개발용 추가 서비스들 (선택사항)
   # ======================
   adminer:
@@ -189,6 +217,8 @@ volumes:
   pgdata-main:
     driver: local
   pgdata-dev:
+    driver: local
+  redis-data:
     driver: local
   gradle-cache:
     driver: local

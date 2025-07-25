@@ -10,17 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface DuoMatchAnalysisRepository extends JpaRepository<DuoMatchAnalysis,Long> {
-
-    List<DuoMatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(AnalysisStatus status);
-
-    List<DuoMatchAnalysis> findByAnalysisStatusOrderByCreatedAtDesc(AnalysisStatus status, Pageable pageable);
-
-    long countByAnalysisStatus(AnalysisStatus status);
-
-    List<DuoMatchAnalysis> findByAnalysisStatusInOrderByCreatedAtAsc(List<AnalysisStatus> statuses);
-
-    List<DuoMatchAnalysis> findByAnalysisStatusOrderByUpdatedAtDesc(AnalysisStatus status);
+public interface DuoMatchAnalysisRepository extends BaseAnalysisRepository<DuoMatchAnalysis> {
 
     List<DuoMatchAnalysis> findByMatchIdOrderByCreatedAtDesc(String matchId);
 

@@ -57,8 +57,9 @@ public class DuoMatchAnalysisService {
             AccountDto player2Account = riotService.getAccountInfo(player2Name,player2Tag);
 
             // 2. 각 플레이어의 최근 매치 목록 조회 (최근 게임 10개 중 겹치는 매치 추출)
-            List<String> player1Matches = riotService.getMatchIds(player1Account.getPuuid(), 0, 10);
-            List<String> player2Matches = riotService.getMatchIds(player2Account.getPuuid(), 0, 10);
+            // 듀오 분석은 5개로 제한 (기존 10개 → 5개, 50% 데이터 절약)
+            List<String> player1Matches = riotService.getMatchIds(player1Account.getPuuid(), 0, 5);
+            List<String> player2Matches = riotService.getMatchIds(player2Account.getPuuid(), 0, 5);
 
             // 3. 공통 매치  중 같은 팀인 경우만 필터링
             List<String> sameTeamMatches = player1Matches.stream()
@@ -69,7 +70,8 @@ public class DuoMatchAnalysisService {
             logger.info("Find {} common matches", sameTeamMatches.size());
             return sameTeamMatches;
         }catch (Exception e){
-            logger.error("Failed to find common matches", e);
+            logger.error("Failed to find common matches for {}#{} and {}#{}", 
+                player1Name, player1Tag, player2Name, player2Tag, e);
             throw new RuntimeException("공통 매치 찾기 실패: " + e.getMessage());
         }
     }
@@ -173,8 +175,34 @@ public class DuoMatchAnalysisService {
             return buildResponseData(savedAnalysis);
 
         }catch (Exception e){
+            String errorMessage = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             logger.error("Duo analysis failed for match: {}", matchId, e);
-            throw new RuntimeException("듀오 분석 실패: "+e.getMessage());
+            
+            // 에러 발생 시 분석 상태를 FAILED로 변경하고 에러 메시지 저장
+            try {
+                Optional<DuoMatchAnalysis> failedAnalysis = duoMatchAnalysisRepository
+                        .findByMatchIdAndPlayer1PuuidAndPlayer2Puuid(matchId, 
+                            riotService.getAccountInfo(player1Name, player1Tag).getPuuid(),
+                            riotService.getAccountInfo(player2Name, player2Tag).getPuuid());
+                
+                if (!failedAnalysis.isPresent()) {
+                    failedAnalysis = duoMatchAnalysisRepository
+                            .findByMatchIdAndPlayer1PuuidAndPlayer2Puuid(matchId,
+                                riotService.getAccountInfo(player2Name, player2Tag).getPuuid(),
+                                riotService.getAccountInfo(player1Name, player1Tag).getPuuid());
+                }
+                
+                if (failedAnalysis.isPresent()) {
+                    DuoMatchAnalysis analysis = failedAnalysis.get();
+                    analysis.setAnalysisStatus(AnalysisStatus.FAILED);
+                    analysis.setErrorMessage(errorMessage);
+                    duoMatchAnalysisRepository.save(analysis);
+                }
+            } catch (Exception saveError) {
+                logger.error("Failed to save error state for match: {}", matchId, saveError);
+            }
+            
+            throw new RuntimeException("듀오 분석 실패: " + errorMessage);
         }
     }
     /*
@@ -192,6 +220,7 @@ public class DuoMatchAnalysisService {
         Map<String, Object> playerData = new HashMap<>();
         playerData.put("puuid", participant.getPuuid());
         playerData.put("championName", participant.getChampionName());
+        playerData.put("position", participant.getTeamPosition());
         playerData.put("kills", participant.getKills());
         playerData.put("deaths", participant.getDeaths());
         playerData.put("assists", participant.getAssists());
@@ -416,7 +445,7 @@ public class DuoMatchAnalysisService {
      */
     public List<DuoMatchAnalysis> getAnalysisByStatusWithPaging(AnalysisStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return duoMatchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status, pageable);
+        return duoMatchAnalysisRepository.findByAnalysisStatusOrderByCreatedAtDesc(status, pageable).getContent();
     }
 
     /**

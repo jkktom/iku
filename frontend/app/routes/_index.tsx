@@ -132,7 +132,7 @@ export default function Index() {
     
     try {
       // 1. Riot API로 계정 정보 조회
-      const accountResponse = await apiFetch(`/api/riot/account/${playerName}/${tagLine}`);
+      const accountResponse = await apiFetch(`/api/riot/account/${encodeURIComponent(playerName)}/${encodeURIComponent(tagLine)}`);
       
       console.log("1. Riot API 응답:", accountResponse);
 

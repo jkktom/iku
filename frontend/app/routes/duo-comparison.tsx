@@ -1,6 +1,7 @@
 // app/routes/duo-comparison.tsx
 import { useState } from 'react'
 import ReactMarkdown from "react-markdown";
+import { useApi } from '~/utils/api';
 
 interface Player {
     name: string
@@ -33,6 +34,7 @@ interface CommonMatchResponse {
 }
 
 export default function DuoComparisonPage() {
+    const apiFetch = useApi()
     const [step, setStep] = useState(1)
     const [player1, setPlayer1] = useState({ name: '', tag: '' })
     const [player2, setPlayer2] = useState({ name: '', tag: '' })
@@ -50,15 +52,13 @@ export default function DuoComparisonPage() {
 
         setLoading(true)
         try {
-            const response = await fetch(
-                `http://localhost:8080/api/analysis/duo/common-matches?player1Name=${encodeURIComponent(player1.name)}&player1Tag=${player1.tag}&player2Name=${encodeURIComponent(player2.name)}&player2Tag=${player2.tag}`
-            )
-
-            if (!response.ok) {
-                throw new Error('공통 매치 조회 실패')
-            }
-
-            const data = await response.json()
+            const params = new URLSearchParams({
+                player1Name: player1.name,
+                player1Tag: player1.tag,
+                player2Name: player2.name,
+                player2Tag: player2.tag
+            });
+            const data = await apiFetch(`/api/analysis/duo/common-matches?${params}`)
             setCommonMatches(data.commonMatches || [])
             if (data.commonMatches && data.commonMatches.length > 0) {
                 setStep(2)
@@ -84,7 +84,7 @@ export default function DuoComparisonPage() {
 
         setLoading(true)
         try {
-            const response = await fetch('http://localhost:8080/api/analysis/duo/analyze', {
+            const data = await apiFetch(`/api/analysis/duo/analyze`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -97,12 +97,6 @@ export default function DuoComparisonPage() {
                     matchId: selectedMatch
                 })
             })
-
-            if (!response.ok) {
-                throw new Error('듀오 분석 실패')
-            }
-
-            const data = await response.json()
             setAnalysisResult(data)
             setStep(3)
 

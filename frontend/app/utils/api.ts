@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/remix";
 import { useCallback } from "react";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export const useApi = () => {
   const { getToken } = useAuth();

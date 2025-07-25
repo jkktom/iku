@@ -14,6 +14,7 @@ public class EventDto {
     private String laneType;
     private String towerType;
     private Integer itemId;
+    private PositionDto position;
 
     public EventDto() {
     }
@@ -106,6 +107,14 @@ public class EventDto {
         this.itemId = itemId;
     }
 
+    public PositionDto getPosition() {
+        return position;
+    }
+
+    public void setPosition(PositionDto position) {
+        this.position = position;
+    }
+
     @Override
     public String toString() {
         return "EventDto{" +
@@ -120,6 +129,7 @@ public class EventDto {
                 ", laneType='" + laneType + '\'' +
                 ", towerType='" + towerType + '\'' +
                 ", itemId=" + itemId +
+                ", position=" + position +
                 '}';
     }
 }

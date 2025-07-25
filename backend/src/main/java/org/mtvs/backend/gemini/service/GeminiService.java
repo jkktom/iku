@@ -54,19 +54,7 @@ public class GeminiService {
             System.out.println("전송 메시지: " + message);
             System.out.println("API Key (일부): " + geminiApiKey.substring(0, Math.min(10, geminiApiKey.length())) + "...");
             
-            // 먼저 원시 응답을 String으로 받아서 확인
-            String rawResponse = restTemplate.exchange(
-                url, 
-                HttpMethod.POST, 
-                entity, 
-                String.class
-            ).getBody();
-            
-            System.out.println("=== 원시 응답 확인 ===");
-            System.out.println(rawResponse);
-            System.out.println("=== 원시 응답 끝 ===");
-            
-            // 그 다음 Response 객체로 파싱
+            // Response 객체로 직접 호출
             Response response = restTemplate.exchange(
                 url, 
                 HttpMethod.POST, 

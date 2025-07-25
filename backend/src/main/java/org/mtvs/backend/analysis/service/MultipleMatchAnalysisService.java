@@ -50,7 +50,8 @@ public class MultipleMatchAnalysisService {
         
         try {
             // 매치 ID 목록 가져오기 (최대 20개, 최신부터)
-            List<String> matchIds = riotService.getMatchIds(puuid, 0, 20);
+            // 다중 매치 분석은 5개로 제한 (기존 20개 → 5개, 75% 데이터 절약)
+            List<String> matchIds = riotService.getMatchIds(puuid, 0, 5);
             
             if (matchIds.isEmpty()) {
                 throw new IllegalArgumentException("해당 플레이어의 매치 기록을 찾을 수 없습니다.");

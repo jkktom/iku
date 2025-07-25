@@ -8,6 +8,7 @@ public class InfoDto {
     private String gameMode; //게임 모드
     private String gameVersion; //게임 버전
     private int queueId; //큐 타입 (ex : 420 = 솔로랭크)
+    private int mapId; //맵 ID (ex : 11 = 소환사의 협곡, 12 = 칼바람 나락)
     private List<ParticipantDto> participants; //참가자별 상세 기록 리스트
 
     public InfoDto() {
@@ -45,6 +46,14 @@ public class InfoDto {
         this.queueId = queueId;
     }
 
+    public int getMapId() {
+        return mapId;
+    }
+
+    public void setMapId(int mapId) {
+        this.mapId = mapId;
+    }
+
     public List<ParticipantDto> getParticipants() {
         return participants;
     }
@@ -60,6 +69,7 @@ public class InfoDto {
                 ", gameMode='" + gameMode + '\'' +
                 ", gameVersion='" + gameVersion + '\'' +
                 ", queueId=" + queueId +
+                ", mapId=" + mapId +
                 ", participants=" + participants +
                 '}';
     }
