@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -120,7 +120,7 @@ export default function AIAnalysis() {
   };
 
   // 2단계: 최신 매치 조회
-  const handleGetMatches = async () => {
+  const handleGetMatches = useCallback(async () => {
     if (!accountInfo) return;
 
     setIsLoadingMatches(true);
@@ -148,7 +148,13 @@ export default function AIAnalysis() {
     } finally {
       setIsLoadingMatches(false);
     }
-  };
+  }, [accountInfo, apiFetch]);
+
+  useEffect(() => {
+    if (accountInfo) {
+      handleGetMatches();
+    }
+  }, [accountInfo, handleGetMatches]);
 
   // 3-1단계: 단일 게임 AI 분석
   const handleSingleAIAnalysis = async () => {
@@ -267,14 +273,7 @@ export default function AIAnalysis() {
             <CardDescription>분석할 게임을 선택하기 위해 최신 게임 정보를 가져옵니다</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button 
-              onClick={handleGetMatches} 
-              disabled={isLoadingMatches}
-              className="w-full"
-            >
-              {isLoadingMatches ? "조회 중..." : "2단계: 최신 게임 조회"}
-            </Button>
-            
+            {isLoadingMatches && <p>최신 게임을 불러오는 중...</p>}
             {matchInfo && (
               <div className="bg-blue-50 border border-blue-200 p-4 rounded">
                 <p><strong>✅ 매치 조회 완료</strong></p>

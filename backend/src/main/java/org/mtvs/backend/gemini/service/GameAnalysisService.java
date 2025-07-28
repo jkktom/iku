@@ -1275,6 +1275,61 @@ public class GameAnalysisService {
     }
     
     /**
+     * 듀오 분석을 위한 플레이어 데이터 추출 (public 메서드)
+     */
+    public Map<String, Object> extractPlayerDataForDuo(MatchDetailDto matchDetail, MatchTimelineDto matchTimeline, String playerPuuid) {
+        return extractPlayerData(matchDetail, matchTimeline, playerPuuid);
+    }
+    
+    /**
+     * 듀오 매치 분석 (데이터를 직접 전달받는 버전)
+     */
+    public String analyzeDuoMatchWithData(Map<String, Object> player1Data, Map<String, Object> player2Data,
+                                         String player1Name, String player1Tag,
+                                         String player2Name, String player2Tag,
+                                         String matchId) {
+        try {
+            System.out.println("=== 듀오 매치 비교 분석 시작 (데이터 직접 전달) ===");
+            
+            // 플레이어 랭크 정보 조회
+            AccountDto player1Account = riotService.getAccountInfo(player1Name, player1Tag);
+            AccountDto player2Account = riotService.getAccountInfo(player2Name, player2Tag);
+            
+            Map<String, Object> player1RiotInfo = riotService.getPlayerRankInfo(player1Account.getPuuid());
+            Map<String, Object> player2RiotInfo = riotService.getPlayerRankInfo(player2Account.getPuuid());
+
+            // 듀오 프롬프트 생성 (전달받은 풍부한 데이터 사용)
+            String analysisPrompt = duoAnalysisPrompt.createPrompt(
+                    player1Data, player2Data,
+                    player1Name, player1Tag,
+                    player2Name, player2Tag,
+                    matchId,
+                    player1RiotInfo, player2RiotInfo
+            );
+
+            // AI 분석 요청
+            String feedback = geminiService.sendMessage(analysisPrompt);
+
+            System.out.println("=== 듀오 매치 비교 분석 완료 (데이터 직접 전달) ===");
+            return feedback;
+
+        } catch (Exception e) {
+            String errorMessage = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            System.err.println("듀오 매치 분석 중 오류 (Match: " + matchId + "): " + errorMessage);
+            e.printStackTrace();
+            
+            StringBuilder detailedError = new StringBuilder();
+            detailedError.append("듀오 분석 중 오류가 발생했습니다.\n");
+            detailedError.append("Match ID: ").append(matchId).append("\n");
+            detailedError.append("Player1: ").append(player1Name).append("#").append(player1Tag).append("\n");
+            detailedError.append("Player2: ").append(player2Name).append("#").append(player2Tag).append("\n");
+            detailedError.append("Error: ").append(errorMessage);
+            
+            return detailedError.toString();
+        }
+    }
+    
+    /**
      * 고급 전투 분석 데이터 생성
      */
     private Map<String, Object> createAdvancedCombatAnalysis(ParticipantDto player) {

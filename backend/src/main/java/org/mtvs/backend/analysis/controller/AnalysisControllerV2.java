@@ -178,6 +178,68 @@ public class AnalysisControllerV2 {
     }
 
     /**
+     * 완료된 단일 분석만 조회
+     */
+    @GetMapping("/single/status/COMPLETED")
+    public ResponseEntity<Map<String, Object>> getCompletedSingleAnalysis(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        
+        try {
+            List<SingleMatchAnalysis> singleAnalyses = singleMatchAnalysisService.getAnalysisByStatusWithPaging(
+                    AnalysisStatus.COMPLETED, page, size);
+            
+            long totalCount = singleMatchAnalysisService.getCompletedCount();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", singleAnalyses);
+            response.put("totalElements", totalCount);
+            response.put("totalPages", (int) Math.ceil((double) totalCount / size));
+            response.put("currentPage", page);
+            response.put("pageSize", size);
+            response.put("message", "단일 분석 기록 조회 완료");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "단일 분석 기록 조회 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
+     * 완료된 종합 분석만 조회
+     */
+    @GetMapping("/multiple/status/COMPLETED")
+    public ResponseEntity<Map<String, Object>> getCompletedMultipleAnalysis(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        
+        try {
+            List<MultipleMatchAnalysis> multipleAnalyses = multipleMatchAnalysisService.getAnalysisByStatusWithPaging(
+                    AnalysisStatus.COMPLETED, page, size);
+            
+            long totalCount = multipleMatchAnalysisService.getCompletedCount();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", multipleAnalyses);
+            response.put("totalElements", totalCount);
+            response.put("totalPages", (int) Math.ceil((double) totalCount / size));
+            response.put("currentPage", page);
+            response.put("pageSize", size);
+            response.put("message", "종합 분석 기록 조회 완료");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "종합 분석 기록 조회 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
      * 완료된 분석 조회 (통합 - 단일 + 다중)
      */
     @GetMapping("/status/COMPLETED")
@@ -203,12 +265,17 @@ public class AnalysisControllerV2 {
                 result.put("matchId", analysis.getMatchId());
                 result.put("targetPlayerName", analysis.getTargetPlayerName());
                 result.put("targetChampion", analysis.getTargetChampion());
+                result.put("matchDuration", analysis.getMatchDuration());
+                result.put("gameMode", analysis.getGameMode());
+                result.put("type", "single");  // 프론트엔드에서 사용하는 필드명
                 result.put("analysisType", "SINGLE");
+                result.put("status", analysis.getAnalysisStatus().name());
                 result.put("analysisStatus", analysis.getAnalysisStatus().name());
                 result.put("analysisSummary", analysis.getAnalysisSummary());
 
                 // LocalDateTime을 문자열로 변환
                 result.put("updatedAt", analysis.getUpdatedAt() != null ? analysis.getUpdatedAt().toString() : "");
+                result.put("createdAt", analysis.getCreatedAt() != null ? analysis.getCreatedAt().toString() : "");
 
                 // aiResponseData가 null인 경우 빈 객체로 설정
                 result.put("aiResponseData", analysis.getAiResponseData() != null ? analysis.getAiResponseData() : new HashMap<>());
@@ -223,24 +290,29 @@ public class AnalysisControllerV2 {
                 result.put("puuid", analysis.getPuuid());
                 result.put("matchId", null); // 다중 분석에서는 null
                 result.put("targetPlayerName", analysis.getTargetPlayerName());
+                result.put("type", "multiple");  // 프론트엔드에서 사용하는 필드명
                 result.put("analysisType", "MULTIPLE");
                 result.put("matchCount", analysis.getMatchCount());
                 result.put("analyzedMatchIds", analysis.getAnalyzedMatchIds());
+                result.put("analysisPeriod", analysis.getAnalysisPeriod());
+                result.put("totalGamesFound", analysis.getTotalGamesFound());
+                result.put("status", analysis.getAnalysisStatus().name());
                 result.put("analysisStatus", analysis.getAnalysisStatus().name());
                 result.put("analysisSummary", analysis.getAnalysisSummary());
 
                 // LocalDateTime을 문자열로 변환
                 result.put("updatedAt", analysis.getUpdatedAt() != null ? analysis.getUpdatedAt().toString() : "");
+                result.put("createdAt", analysis.getCreatedAt() != null ? analysis.getCreatedAt().toString() : "");
 
                 // aiResponseData가 null인 경우 빈 객체로 설정
                 result.put("aiResponseData", analysis.getAiResponseData() != null ? analysis.getAiResponseData() : new HashMap<>());
                 combinedResults.add(result);
             }
 
-            // 정렬 로직 수정 - null 체크 추가 및 안전한 비교
+            // 정렬 로직 수정 - createdAt 기준으로 최신순 정렬
             combinedResults.sort((a, b) -> {
-                String aDate = (String) a.get("updatedAt");
-                String bDate = (String) b.get("updatedAt");
+                String aDate = (String) a.get("createdAt");
+                String bDate = (String) b.get("createdAt");
 
                 // null 체크
                 if (aDate == null && bDate == null) return 0;

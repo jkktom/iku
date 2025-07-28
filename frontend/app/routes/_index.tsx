@@ -3,13 +3,26 @@ import { Link } from '@remix-run/react'
 import type { MetaFunction } from "@remix-run/node";
 import { useApi } from '~/utils/api'
 import { useEffect, useState } from 'react'
-import { useState as reactUseState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Label } from "~/components/ui/label";
+import { Badge } from "~/components/ui/badge";
 import ReactMarkdown from "react-markdown";
-
+import {
+  Target,
+  Play,
+  CheckCircle2,
+  BarChart3,
+  Zap,
+  Brain,
+  TrendingUp,
+  Users,
+  Award,
+  Sparkles,
+  ArrowLeft,
+  Star,
+  Gamepad2,
+} from "lucide-react"
 
 interface AIResponseData {
   analysisResult?: string;
@@ -20,11 +33,6 @@ interface AccountInfo {
   puuid: string;
   gameName: string;
   tagLine: string;
-}
-
-interface MatchInfo {
-  matchIds: string[];
-  selectedMatchId: string;
 }
 
 interface SingleAnalysisResult {
@@ -75,28 +83,20 @@ export default function Index() {
   const [user, setUser] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   
-  // Step 1: Get PUUID
-  const [playerName, setPlayerName] = reactUseState("");
-  const [tagLine, setTagLine] = reactUseState("");
-  const [accountInfo, setAccountInfo] = reactUseState<AccountInfo | null>(null);
-  const [isLoadingAccount, setIsLoadingAccount] = reactUseState(false);
+  // 새로운 UI 상태 관리
+  const [playerName, setPlayerName] = useState("")
+  const [tagLine, setTagLine] = useState("")
+  const [analysisStep, setAnalysisStep] = useState<"input" | "select" | "analyzing" | "results">("input")
+  const [selectedAnalysisType, setSelectedAnalysisType] = useState<"single" | "comprehensive" | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
   
-  // Step 2: Get Match ID
-  const [matchInfo, setMatchInfo] = reactUseState<MatchInfo | null>(null);
-  const [isLoadingMatches, setIsLoadingMatches] = reactUseState(false);
-  
-  // Step 3-1: Single Match Analysis
-  const [singleAnalysisResult, setSingleAnalysisResult] = reactUseState<SingleAnalysisResult | null>(null);
-  const [isLoadingSingleAnalysis, setIsLoadingSingleAnalysis] = reactUseState(false);
-
-  // Step 3-2: Multiple Match Analysis (5게임 고정)
-  const [multipleAnalysisResult, setMultipleAnalysisResult] = reactUseState<MultipleAnalysisResult | null>(null);
-  const [isLoadingMultipleAnalysis, setIsLoadingMultipleAnalysis] = reactUseState(false);
-  
-  const [apiError, setApiError] = reactUseState<string>("");
+  // 기존 상태들
+  const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
+  const [singleAnalysisResult, setSingleAnalysisResult] = useState<SingleAnalysisResult | null>(null);
+  const [multipleAnalysisResult, setMultipleAnalysisResult] = useState<MultipleAnalysisResult | null>(null);
+  const [apiError, setApiError] = useState<string>("");
 
   useEffect(() => {
-    // Only fetch user data if the user is actually signed in
     if (!isSignedIn) {
       setUser(null)
       setError(null)
@@ -120,129 +120,132 @@ export default function Index() {
     fetchUser()
   }, [apiFetch, isSignedIn])
 
-  // 1단계: 계정 정보 조회
-  const handleGetAccount = async () => {
-    if (!playerName || !tagLine) {
-      setApiError("플레이어명과 태그를 모두 입력해주세요.");
-      return;
+  const handleStartAnalysis = () => {
+    if (analysisStep === "input") {
+      setAnalysisStep("select")
+    } else if (analysisStep === "select" && selectedAnalysisType) {
+      performAnalysis()
     }
+  }
 
-    setIsLoadingAccount(true);
-    setApiError("");
-    
+  const handleAnalysisTypeSelect = (type: "single" | "comprehensive") => {
+    setSelectedAnalysisType(type)
+  }
+
+  const handleBackToInput = () => {
+    setAnalysisStep("input")
+    setSelectedAnalysisType(null)
+  }
+
+  const resetToStart = () => {
+    setAnalysisStep("input")
+    setSelectedAnalysisType(null)
+    setPlayerName("")
+    setTagLine("")
+    setAccountInfo(null)
+    setSingleAnalysisResult(null)
+    setMultipleAnalysisResult(null)
+    setApiError("")
+  }
+
+  const performAnalysis = async () => {
+    setAnalysisStep("analyzing")
+    setIsAnalyzing(true)
+    setApiError("")
+
     try {
-      // 1. Riot API로 계정 정보 조회
+      // 1. 계정 정보 조회
       const accountResponse = await apiFetch(`/api/riot/account/${encodeURIComponent(playerName)}/${encodeURIComponent(tagLine)}`);
       
-      console.log("1. Riot API 응답:", accountResponse);
-
-      if (accountResponse.account) {
-        setAccountInfo(accountResponse.account);
-        
-        // 디버깅: 실제 전송할 데이터 확인
-        console.log("2. 계정 정보 조회 완료:", accountResponse.account);
-        console.log("3. JSON 변환 결과:", JSON.stringify(accountResponse.account));
-        
-        // 기존 결과 초기화
-        setMatchInfo(null);
-        setSingleAnalysisResult(null);
-        setMultipleAnalysisResult(null);
-      } else {
+      if (!accountResponse.account) {
         setApiError("계정 정보를 찾을 수 없습니다.");
+        setAnalysisStep("select")
+        setIsAnalyzing(false)
+        return;
       }
-    } catch (err) {
-      console.error("4. 에러 발생:", err);
-      setApiError("계정 정보 조회에 실패했습니다.");
-    } finally {
-      setIsLoadingAccount(false);
-    }
-  };
 
-  // 2단계: 최신 매치 조회
-  const handleGetMatches = async () => {
-    if (!accountInfo) return;
+      const account = accountResponse.account;
+      setAccountInfo(account);
 
-    setIsLoadingMatches(true);
-    setApiError("");
+      if (selectedAnalysisType === "single") {
+        // 단일 게임 분석
+        const matchResponse = await apiFetch(`/api/riot/matches/${account.puuid}`);
+        
+        if (!matchResponse.selectedMatchId) {
+          setApiError("매치 정보를 찾을 수 없습니다.");
+          setAnalysisStep("select")
+          setIsAnalyzing(false)
+          return;
+        }
 
-    try {
-      // 1. Riot API로 매치 ID 조회
-      const matchResponse = await apiFetch(`/api/riot/matches/${accountInfo.puuid}`);
-
-      if (matchResponse.selectedMatchId) {
-        setMatchInfo({
-          matchIds: matchResponse.matchIds,
-          selectedMatchId: matchResponse.selectedMatchId
-        });
-
-        // 기존 분석 결과 초기화
-        setSingleAnalysisResult(null);
+        const analysisResponse = await apiFetch(
+          `/api/analysis/analyze/${account.puuid}/${matchResponse.selectedMatchId}`,
+          { method: 'POST' }
+        );
+        
+        setSingleAnalysisResult(analysisResponse);
         setMultipleAnalysisResult(null);
       } else {
-        setApiError("매치 정보를 찾을 수 없습니다.");
+        // 다중 게임 분석
+        const analysisResponse = await apiFetch(
+          `/api/analysis/analyze-multiple/${account.puuid}?matchCount=5`,
+          { method: 'POST' }
+        );
+        
+        setMultipleAnalysisResult(analysisResponse);
+        setSingleAnalysisResult(null);
       }
+
+      setAnalysisStep("results")
     } catch (err) {
-      setApiError("매치 정보 조회에 실패했습니다.");
-      console.error(err);
+      console.error("분석 오류:", err);
+      setApiError("분석에 실패했습니다. 다시 시도해주세요.");
+      setAnalysisStep("select")
     } finally {
-      setIsLoadingMatches(false);
+      setIsAnalyzing(false)
     }
-  };
-
-  // 3-1단계: 단일 게임 AI 분석
-  const handleSingleAIAnalysis = async () => {
-    if (!accountInfo || !matchInfo) return;
-
-    setIsLoadingSingleAnalysis(true);
-    setApiError("");
-
-    try {
-      // 바로 AI 분석 수행 (한번에 처리)
-      const response = await apiFetch(
-        `/api/analysis/analyze/${accountInfo.puuid}/${matchInfo.selectedMatchId}`,
-        { method: 'POST' }
-      );
-      
-      setSingleAnalysisResult(response);
-      setMultipleAnalysisResult(null); // 다중 분석 결과 초기화
-    } catch (err) {
-      setApiError("단일 게임 AI 분석에 실패했습니다.");
-      console.error(err);
-    } finally {
-      setIsLoadingSingleAnalysis(false);
-    }
-  };
-
-  // 3-2단계: 다중 게임 AI 분석 (5게임 고정)
-  const handleMultipleAIAnalysis = async () => {
-    if (!accountInfo) return;
-
-    setIsLoadingMultipleAnalysis(true);
-    setApiError("");
-
-    try {
-      // 바로 AI 분석 수행 (한번에 처리)
-      const response = await apiFetch(
-        `/api/analysis/analyze-multiple/${accountInfo.puuid}?matchCount=5`,
-        { method: 'POST' }
-      );
-      
-      setMultipleAnalysisResult(response);
-      setSingleAnalysisResult(null); // 단일 분석 결과 초기화
-    } catch (err) {
-      setApiError("5게임 종합 분석에 실패했습니다.");
-      console.error(err);
-    } finally {
-      setIsLoadingMultipleAnalysis(false);
-    }
-  };
+  }
 
   return (
-    <div className="h-full bg-gray-50">
-      <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">AI 게임 분석</h1>
-          <p className="text-gray-600 mt-2">리그 오브 레전드 게임 플레이를 AI로 분석해보세요</p>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-cyan-400/20 to-blue-600/20 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-purple-400/10 to-pink-400/10 rounded-full blur-3xl animate-pulse delay-500" />
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-6xl relative z-10">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-lg opacity-75 group-hover:opacity-100 transition-opacity animate-pulse" />
+              <div className="relative bg-white p-4 rounded-full shadow-2xl">
+                <Target className="w-12 h-12 text-blue-600" />
+              </div>
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full animate-bounce">
+                <Star className="w-4 h-4 text-white m-1" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-5xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+                AI 게임 분석
+              </h1>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-100" />
+                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse delay-200" />
+              </div>
+            </div>
+          </div>
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            플레이어명만 입력하면 최신 게임을 자동으로 분석해드려요
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
+            <Gamepad2 className="w-4 h-4" />
+            <span>AI 기반 실시간 게임 분석 플랫폼</span>
+          </div>
           <SignedIn>
             {user && (
               <div className="mt-2 text-sm text-gray-500">
@@ -262,246 +265,453 @@ export default function Index() {
           </SignedOut>
         </div>
 
-        <div className="space-y-6">
+        {/* Error Display */}
+        {apiError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+            {apiError}
+          </div>
+        )}
 
-      {apiError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {apiError}
-        </div>
-      )}
-
-      {/* Step 1: 계정 정보 조회 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>1단계: 계정 정보 조회</CardTitle>
-          <CardDescription>플레이어명과 태그를 입력하여 계정 정보를 조회합니다</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="playerName">플레이어명</Label>
-              <Input
-                id="playerName"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="예: Hide on bush"
-              />
+        {/* Main Analysis Section */}
+        <Card className="mb-12 overflow-hidden border-0 shadow-2xl backdrop-blur-xl bg-white/10 hover:shadow-3xl transition-all duration-500">
+          <div className="bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 p-10 text-white relative overflow-hidden">
+            {/* Animated Background Patterns */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 rounded-full -translate-y-32 translate-x-32 animate-pulse" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24 animate-pulse delay-1000" />
+              <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-white/15 rounded-full animate-bounce delay-500" />
             </div>
-            <div>
-              <Label htmlFor="tagLine">태그</Label>
-              <Input
-                id="tagLine"
-                value={tagLine}
-                onChange={(e) => setTagLine(e.target.value)}
-                placeholder="예: KR1"
+
+            <div className="relative z-10">
+              {analysisStep === "input" && (
+                <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                      <Zap className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h2 className="text-4xl font-bold mb-1">빠른 AI 분석</h2>
+                      <p className="text-blue-100">계정 조회부터 분석까지 원클릭으로 완료</p>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-8 mb-10">
+                    <div className="space-y-3">
+                      <label className="text-sm font-semibold text-blue-100 uppercase tracking-wider">플레이어명</label>
+                      <div className="relative group">
+                        <Input
+                          value={playerName}
+                          onChange={(e) => setPlayerName(e.target.value)}
+                          placeholder="예: Hide on bush"
+                          className="bg-white/20 border-white/30 text-white placeholder:text-blue-200 focus:bg-white/30 transition-all duration-300 h-14 text-lg rounded-2xl backdrop-blur-sm group-hover:bg-white/25"
+                        />
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-sm font-semibold text-blue-100 uppercase tracking-wider">태그</label>
+                      <div className="relative group">
+                        <Input
+                          value={tagLine}
+                          onChange={(e) => setTagLine(e.target.value)}
+                          placeholder="예: KR1"
+                          className="bg-white/20 border-white/30 text-white placeholder:text-blue-200 focus:bg-white/30 transition-all duration-300 h-14 text-lg rounded-2xl backdrop-blur-sm group-hover:bg-white/25"
+                        />
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleStartAnalysis}
+                    disabled={!playerName || !tagLine}
+                    className="bg-white text-blue-600 hover:bg-blue-50 font-bold px-10 py-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 disabled:opacity-50 text-lg group"
+                  >
+                    <Play className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
+                    다음 단계
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Button>
+                </div>
+              )}
+
+              {analysisStep === "select" && (
+                <div className="animate-in fade-in-0 slide-in-from-right-4 duration-500">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                      <Target className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h2 className="text-4xl font-bold mb-1">분석 타입 선택</h2>
+                      <p className="text-blue-100">
+                        <span className="font-semibold text-yellow-300">{playerName}</span>님의 게임 분석 방식을
+                        선택해주세요
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-8 mb-10">
+                    <button
+                      onClick={() => handleAnalysisTypeSelect("single")}
+                      className={`p-8 rounded-3xl border-2 transition-all duration-500 text-left group relative overflow-hidden ${
+                        selectedAnalysisType === "single"
+                          ? "border-white bg-white/30 shadow-2xl scale-105"
+                          : "border-white/30 hover:border-white/60 hover:bg-white/20 hover:scale-102"
+                      }`}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative z-10">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="p-3 bg-blue-500/30 rounded-2xl backdrop-blur-sm">
+                            <Play className="w-8 h-8" />
+                          </div>
+                          <h3 className="text-2xl font-bold">단일 게임 분석</h3>
+                        </div>
+                        <p className="text-blue-100 mb-6 text-lg">최신 게임 1개를 상세히 분석합니다</p>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-400" />
+                            <span className="text-sm">핵심 순간별 플레이 분석</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-400" />
+                            <span className="text-sm">즉시 개선 가능한 팁 제공</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => handleAnalysisTypeSelect("comprehensive")}
+                      className={`p-8 rounded-3xl border-2 transition-all duration-500 text-left group relative overflow-hidden ${
+                        selectedAnalysisType === "comprehensive"
+                          ? "border-white bg-white/30 shadow-2xl scale-105"
+                          : "border-white/30 hover:border-white/60 hover:bg-white/20 hover:scale-102"
+                      }`}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative z-10">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="p-3 bg-emerald-500/30 rounded-2xl backdrop-blur-sm">
+                            <BarChart3 className="w-8 h-8" />
+                          </div>
+                          <h3 className="text-2xl font-bold">종합 게임 분석</h3>
+                        </div>
+                        <p className="text-blue-100 mb-6 text-lg">최근 5게임의 패턴을 종합 분석합니다</p>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-400" />
+                            <span className="text-sm">심리적 플레이 성향 파악</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-400" />
+                            <span className="text-sm">맞춤형 성장 로드맵 제공</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div className="flex gap-6">
+                    <Button
+                      onClick={handleBackToInput}
+                      variant="outline"
+                      className="bg-white/20 border-white/40 text-white hover:bg-white/30 font-semibold px-8 py-4 rounded-2xl backdrop-blur-sm transition-all duration-300"
+                    >
+                      <ArrowLeft className="w-5 h-5 mr-2" />
+                      이전
+                    </Button>
+                    <Button
+                      onClick={handleStartAnalysis}
+                      disabled={!selectedAnalysisType}
+                      className="bg-white text-blue-600 hover:bg-blue-50 font-bold px-10 py-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 disabled:opacity-50 text-lg group"
+                    >
+                      <Play className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
+                      분석 시작
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {analysisStep === "analyzing" && (
+                <div className="animate-in fade-in-0 slide-in-from-left-4 duration-500 text-center">
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <div className="relative">
+                      <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="absolute inset-2 bg-white/20 rounded-full animate-pulse" />
+                    </div>
+                    <div>
+                      <h2 className="text-4xl font-bold mb-1">분석 진행 중</h2>
+                      <p className="text-blue-100">AI가 열심히 분석하고 있어요</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/20 rounded-3xl p-8 backdrop-blur-sm mb-8">
+                    <p className="text-xl mb-4">
+                      <span className="font-bold text-yellow-300">{playerName}</span>님의{" "}
+                      <span className="font-semibold">
+                        {selectedAnalysisType === "single" ? "단일 게임" : "종합 게임"}
+                      </span>{" "}
+                      분석을 진행하고 있습니다
+                    </p>
+
+                    <div className="flex items-center justify-center gap-3 text-blue-100">
+                      <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" />
+                      <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce delay-100" />
+                      <div className="w-3 h-3 bg-indigo-400 rounded-full animate-bounce delay-200" />
+                      <span className="ml-4">AI가 게임 데이터를 분석하고 있습니다</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Results Section */}
+        {analysisStep === "results" && (singleAnalysisResult || multipleAnalysisResult) && (
+          <div className="space-y-8">
+            {/* Single Game Analysis Result */}
+            {singleAnalysisResult && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-blue-700">단일 게임 분석 결과</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p><strong>플레이어:</strong> {singleAnalysisResult.analysisRecord.targetPlayerName}</p>
+                          <p><strong>매치 ID:</strong> {singleAnalysisResult.analysisRecord.matchId}</p>
+                          {singleAnalysisResult.analysisRecord.targetChampion && (
+                            <p><strong>사용 챔피언:</strong> {singleAnalysisResult.analysisRecord.targetChampion}</p>
+                          )}
+                          {singleAnalysisResult.analysisRecord.gameMode && (
+                            <p><strong>게임 모드:</strong> {singleAnalysisResult.analysisRecord.gameMode}</p>
+                          )}
+                          {singleAnalysisResult.analysisRecord.matchDuration && (
+                            <p><strong>게임 시간:</strong> {Math.floor(singleAnalysisResult.analysisRecord.matchDuration / 60)}분 {singleAnalysisResult.analysisRecord.matchDuration % 60}초</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p><strong>상태:</strong> <span className="text-green-600">{singleAnalysisResult.analysisRecord.status}</span></p>
+                          <p><strong>분석 완료:</strong> {new Date(singleAnalysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <strong>분석 결과:</strong>
+                        <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
+                          <div className="prose prose-sm max-w-none">
+                            <ReactMarkdown>
+                              {singleAnalysisResult.analysisRecord.aiResponseData?.analysisResult ||
+                               singleAnalysisResult.analysisRecord.analysisSummary}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Multiple Game Analysis Result */}
+            {multipleAnalysisResult && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-green-700">5게임 종합 분석 결과</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-green-50 border border-green-200 p-4 rounded">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p><strong>플레이어:</strong> {multipleAnalysisResult.analysisRecord.targetPlayerName}</p>
+                          <p><strong>분석 기간:</strong> {multipleAnalysisResult.analysisRecord.analysisPeriod}</p>
+                          <p><strong>분석된 게임 수:</strong> {multipleAnalysisResult.analysisRecord.matchCount}개</p>
+                          <p><strong>총 조회된 게임:</strong> {multipleAnalysisResult.analysisRecord.totalGamesFound}개</p>
+                        </div>
+                        <div className="text-right">
+                          <p><strong>상태:</strong> <span className="text-green-600">{multipleAnalysisResult.analysisRecord.status}</span></p>
+                          <p><strong>분석 완료:</strong> {new Date(multipleAnalysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <strong>분석된 매치 ID 목록:</strong>
+                        <div className="bg-white p-3 rounded border mt-2">
+                          <div className="flex flex-wrap gap-2">
+                            {multipleAnalysisResult.analysisRecord.analyzedMatchIds.map((matchId, index) => (
+                              <span key={index} className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
+                                {matchId}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <strong>종합 분석 결과:</strong>
+                        <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
+                          <div className="prose prose-sm max-w-none">
+                            <ReactMarkdown>
+                              {multipleAnalysisResult.analysisRecord.aiResponseData?.analysisResult ||
+                               multipleAnalysisResult.analysisRecord.analysisSummary}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* New Analysis Button */}
+            <div className="text-center">
+              <Button
+                onClick={resetToStart}
+                className="bg-blue-600 text-white hover:bg-blue-700 font-bold px-10 py-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 text-lg"
+              >
+                새로운 분석 시작
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Analysis Types - Only show when in input step */}
+        {analysisStep === "input" && (
+          <div className="grid lg:grid-cols-2 gap-8 mb-16">
+            {/* Single Game Analysis */}
+            <Card className="border-0 shadow-2xl hover:shadow-3xl transition-all duration-500 group backdrop-blur-xl bg-white/80 hover:bg-white/90 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <CardHeader className="pb-6 relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform">
+                    <Play className="w-8 h-8 text-white" />
+                  </div>
+                  <CardTitle className="text-3xl font-bold text-slate-800">단일 게임 분석</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5 relative z-10">
+                <AnalysisFeature
+                  icon={<CheckCircle2 className="w-6 h-6 text-emerald-500" />}
+                  text="최신 게임 1개 상세 분석"
+                  badge="실시간"
+                />
+                <AnalysisFeature
+                  icon={<Brain className="w-6 h-6 text-emerald-500" />}
+                  text="핵심 순간별 플레이 분석"
+                  badge="AI 분석"
+                />
+                <AnalysisFeature
+                  icon={<TrendingUp className="w-6 h-6 text-emerald-500" />}
+                  text="즉시 개선 가능한 팁 제공"
+                  badge="맞춤형"
+                />
+              </CardContent>
+            </Card>
+
+            {/* Comprehensive Analysis */}
+            <Card className="border-0 shadow-2xl hover:shadow-3xl transition-all duration-500 group backdrop-blur-xl bg-white/80 hover:bg-white/90 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <CardHeader className="pb-6 relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform">
+                    <BarChart3 className="w-8 h-8 text-white" />
+                  </div>
+                  <CardTitle className="text-3xl font-bold text-slate-800">종합 게임 분석</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5 relative z-10">
+                <AnalysisFeature
+                  icon={<CheckCircle2 className="w-6 h-6 text-emerald-500" />}
+                  text="최근 5게임 패턴 분석"
+                  badge="트렌드"
+                />
+                <AnalysisFeature
+                  icon={<Users className="w-6 h-6 text-emerald-500" />}
+                  text="심리적 플레이 성향 파악"
+                  badge="심층 분석"
+                />
+                <AnalysisFeature
+                  icon={<Award className="w-6 h-6 text-emerald-500" />}
+                  text="맞춤형 성장 로드맵 제공"
+                  badge="개인화"
+                />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Features Section */}
+        {analysisStep === "input" && (
+          <div className="text-center">
+            <h3 className="text-4xl font-bold text-slate-800 mb-4">AI 분석의 특별한 기능들</h3>
+            <p className="text-lg text-slate-600 mb-12">최첨단 AI 기술로 제공하는 프리미엄 게임 분석 서비스</p>
+            <div className="grid md:grid-cols-3 gap-8">
+              <FeatureCard
+                icon={<Sparkles className="w-10 h-10 text-yellow-500" />}
+                title="실시간 분석"
+                description="게임 종료 즉시 상세한 분석 결과를 제공합니다"
+                gradient="from-yellow-400 to-orange-500"
+              />
+              <FeatureCard
+                icon={<Brain className="w-10 h-10 text-purple-500" />}
+                title="AI 기반 인사이트"
+                description="머신러닝으로 숨겨진 패턴과 개선점을 발견합니다"
+                gradient="from-purple-400 to-pink-500"
+              />
+              <FeatureCard
+                icon={<TrendingUp className="w-10 h-10 text-green-500" />}
+                title="성장 추적"
+                description="시간에 따른 실력 향상을 시각적으로 확인하세요"
+                gradient="from-green-400 to-teal-500"
               />
             </div>
           </div>
-          <Button 
-            onClick={handleGetAccount} 
-            disabled={isLoadingAccount}
-            className="w-full"
-          >
-            {isLoadingAccount ? "조회 중..." : "1단계: 계정 정보 조회"}
-          </Button>
-          
-          {accountInfo && (
-            <div className="bg-green-50 border border-green-200 p-4 rounded">
-              <p><strong>✅ 계정 조회 완료</strong></p>
-              <p><strong>플레이어:</strong> {accountInfo.gameName}#{accountInfo.tagLine}</p>
-              <p><strong>PUUID:</strong> {accountInfo.puuid}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Step 2: 최신 게임 조회 */}
-      {accountInfo && (
-        <Card>
-          <CardHeader>
-            <CardTitle>2단계: 최신 게임 조회</CardTitle>
-            <CardDescription>분석할 게임을 선택하기 위해 최신 게임 정보를 가져옵니다</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button 
-              onClick={handleGetMatches} 
-              disabled={isLoadingMatches}
-              className="w-full"
-            >
-              {isLoadingMatches ? "조회 중..." : "2단계: 최신 게임 조회"}
-            </Button>
-            
-            {matchInfo && (
-              <div className="bg-blue-50 border border-blue-200 p-4 rounded">
-                <p><strong>✅ 매치 조회 완료</strong></p>
-                <p><strong>최신 매치 ID:</strong> {matchInfo.selectedMatchId}</p>
-                <p><strong>총 매치 수:</strong> {matchInfo.matchIds.length}개</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 3: AI 분석 선택 */}
-      {matchInfo && (
-        <Card>
-          <CardHeader>
-            <CardTitle>3단계: AI 분석 선택</CardTitle>
-            <CardDescription>단일 게임 분석 또는 5게임 종합 분석을 선택하세요</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* 3-1: 단일 게임 분석 */}
-              <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">3-1. 단일 게임 분석</h4>
-                <p className="text-sm text-gray-600">최신 게임 1개에 대한 상세 분석</p>
-                <Button
-                  onClick={handleSingleAIAnalysis}
-                  disabled={isLoadingSingleAnalysis}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  {isLoadingSingleAnalysis ? "분석 중..." : "단일 게임 AI 분석"}
-                </Button>
-              </div>
-
-              {/* 3-2: 다중 게임 분석 */}
-              <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">3-2. 종합 게임 분석</h4>
-                <p className="text-sm text-gray-600">최근 5게임에 대한 종합 분석</p>
-                <Button
-                  onClick={handleMultipleAIAnalysis}
-                  disabled={isLoadingMultipleAnalysis}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  {isLoadingMultipleAnalysis ? "분석 중..." : "5게임 종합 AI 분석"}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 단일 게임 분석 결과 */}
-      {singleAnalysisResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-blue-700">단일 게임 분석 결과</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded">
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p><strong>플레이어:</strong> {singleAnalysisResult.analysisRecord.targetPlayerName}</p>
-                    <p><strong>매치 ID:</strong> {singleAnalysisResult.analysisRecord.matchId}</p>
-                    {singleAnalysisResult.analysisRecord.targetChampion && (
-                      <p><strong>사용 챔피언:</strong> {singleAnalysisResult.analysisRecord.targetChampion}</p>
-                    )}
-                    {singleAnalysisResult.analysisRecord.gameMode && (
-                      <p><strong>게임 모드:</strong> {singleAnalysisResult.analysisRecord.gameMode}</p>
-                    )}
-                    {singleAnalysisResult.analysisRecord.matchDuration && (
-                      <p><strong>게임 시간:</strong> {Math.floor(singleAnalysisResult.analysisRecord.matchDuration / 60)}분 {singleAnalysisResult.analysisRecord.matchDuration % 60}초</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p><strong>상태:</strong> <span className="text-green-600">{singleAnalysisResult.analysisRecord.status}</span></p>
-                    <p><strong>분석 완료:</strong> {new Date(singleAnalysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <strong>분석 결과:</strong>
-                  <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
-                    <div className="prose prose-sm max-w-none">
-                      <ReactMarkdown>
-                        {singleAnalysisResult.analysisRecord.aiResponseData?.analysisResult ||
-                         singleAnalysisResult.analysisRecord.analysisSummary}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-
-                {singleAnalysisResult.analysisRecord.aiResponseData && (
-                  <div className="mt-4">
-                    <strong>상세 데이터:</strong>
-                    <div className="bg-gray-50 p-3 rounded border mt-2 max-h-60 overflow-y-auto">
-                      <pre className="whitespace-pre-wrap text-xs break-words leading-relaxed">
-                        {JSON.stringify(singleAnalysisResult.analysisRecord.aiResponseData, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 다중 게임 분석 결과 */}
-      {multipleAnalysisResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-green-700">5게임 종합 분석 결과</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-green-50 border border-green-200 p-4 rounded">
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p><strong>플레이어:</strong> {multipleAnalysisResult.analysisRecord.targetPlayerName}</p>
-                    <p><strong>분석 기간:</strong> {multipleAnalysisResult.analysisRecord.analysisPeriod}</p>
-                    <p><strong>분석된 게임 수:</strong> {multipleAnalysisResult.analysisRecord.matchCount}개</p>
-                    <p><strong>총 조회된 게임:</strong> {multipleAnalysisResult.analysisRecord.totalGamesFound}개</p>
-                  </div>
-                  <div className="text-right">
-                    <p><strong>상태:</strong> <span className="text-green-600">{multipleAnalysisResult.analysisRecord.status}</span></p>
-                    <p><strong>분석 완료:</strong> {new Date(multipleAnalysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <strong>분석된 매치 ID 목록:</strong>
-                  <div className="bg-white p-3 rounded border mt-2">
-                    <div className="flex flex-wrap gap-2">
-                      {multipleAnalysisResult.analysisRecord.analyzedMatchIds.map((matchId, index) => (
-                        <span key={index} className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-                          {matchId}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <strong>종합 분석 결과:</strong>
-                  <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
-                    <div className="prose prose-sm max-w-none">
-                      <ReactMarkdown>
-                        {multipleAnalysisResult.analysisRecord.aiResponseData?.analysisResult ||
-                         multipleAnalysisResult.analysisRecord.analysisSummary}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-
-                {multipleAnalysisResult.analysisRecord.aiResponseData && (
-                  <div className="mt-4">
-                    <strong>상세 분석 데이터:</strong>
-                    <div className="bg-gray-50 p-3 rounded border mt-2 max-h-60 overflow-y-auto">
-                      <pre className="whitespace-pre-wrap text-xs break-words leading-relaxed">
-                        {JSON.stringify(multipleAnalysisResult.analysisRecord.aiResponseData, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-        </div>
+        )}
       </div>
     </div>
+  )
+}
+
+function AnalysisFeature({ icon, text, badge }: { icon: React.ReactNode; text: string; badge: string }) {
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50/80 transition-all duration-300 group">
+      <div className="group-hover:scale-110 transition-transform">{icon}</div>
+      <span className="flex-1 text-slate-700 font-semibold text-lg">{text}</span>
+      <Badge
+        variant="secondary"
+        className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 hover:from-blue-200 hover:to-purple-200 px-3 py-1 rounded-full font-medium"
+      >
+        {badge}
+      </Badge>
+    </div>
+  )
+}
+
+function FeatureCard({
+  icon,
+  title,
+  description,
+  gradient,
+}: { icon: React.ReactNode; title: string; description: string; gradient: string }) {
+  return (
+    <Card className="border-0 shadow-2xl hover:shadow-3xl transition-all duration-500 group backdrop-blur-xl bg-white/80 hover:bg-white/90 overflow-hidden">
+      <div
+        className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-5 transition-opacity`}
+      />
+      <CardContent className="p-8 text-center relative z-10">
+        <div className="mb-6 flex justify-center group-hover:scale-110 transition-transform duration-300">
+          <div className={`p-4 bg-gradient-to-br ${gradient} rounded-2xl shadow-lg`}>
+            <div className="text-white">{icon}</div>
+          </div>
+        </div>
+        <h4 className="text-2xl font-bold text-slate-800 mb-4">{title}</h4>
+        <p className="text-slate-600 leading-relaxed text-lg">{description}</p>
+      </CardContent>
+    </Card>
   )
 }

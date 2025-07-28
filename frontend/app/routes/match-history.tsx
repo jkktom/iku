@@ -1,612 +1,701 @@
-import { useState, useEffect } from "react";
-import { Link } from "@remix-run/react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import { Badge } from "~/components/ui/badge";
-import { useApi } from "~/utils/api";
-import ReactMarkdown from "react-markdown";
-import { Clock, User, Trophy, AlertCircle, CheckCircle, Loader, FileText, Target, Users } from "lucide-react";
+"use client"
 
-interface SingleAnalysis {
-  id: number;
-  puuid: string;
-  matchId: string;
-  targetPlayerName: string;
-  targetChampion?: string;
-  matchDuration?: number;
-  gameMode?: string;
-  analysisStatus: 'REQUESTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-  analysisSummary: string;
-  aiResponseData: any;
-  createdAt: string;
-  updatedAt: string;
-  errorMessage?: string;
+import { useState, useEffect, useCallback } from "react"
+import { Button } from "~/components/ui/button"
+import { Input } from "~/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
+import { Badge } from "~/components/ui/badge"
+import { useApi } from '~/utils/api'
+import ReactMarkdown from "react-markdown"
+import {
+  History,
+  Search,
+  RefreshCw,
+  User,
+  Users,
+  Trophy,
+  Clock,
+  CheckCircle2,
+  Eye,
+  Calendar,
+  Star,
+  Gamepad2,
+  Sparkles,
+  BarChart3,
+  Target,
+  Brain,
+  AlertTriangle,
+  Loader2,
+  X,
+} from "lucide-react"
+
+// Modal Component for Analysis Detail
+const AnalysisDetailModal = ({ record, onClose, activeTab }: { record: any; onClose: () => void; activeTab: string }) => {
+  if (!record) return null
+
+  let analysisContent = "";
+  if (activeTab === 'duo') {
+    analysisContent = record.comparisonResult || record.analysisSummary || "상세 분석 내용이 없습니다.";
+  } else {
+    analysisContent = record.aiResponseData?.analysisResult || record.analysisSummary || "상세 분석 내용이 없습니다.";
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4" onClick={onClose}>
+      <div 
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" 
+        onClick={(e) => e.stopPropagation()}
+      >
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b p-6">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-2xl font-bold text-gray-800 flex items-center">
+              <Brain className="w-7 h-7 mr-3 text-blue-500" />
+              상세 분석 결과
+            </CardTitle>
+            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+              <X className="h-6 w-6" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-8 overflow-y-auto">
+          <div className="prose prose-lg max-w-none">
+            <ReactMarkdown>{analysisContent}</ReactMarkdown>
+          </div>
+        </CardContent>
+      </div>
+    </div>
+  )
 }
 
-interface MultipleAnalysis {
-  id: number;
-  puuid: string;
-  targetPlayerName: string;
-  matchCount: number;
-  analyzedMatchIds: string[];
-  analysisPeriod: string;
-  totalGamesFound: number;
-  analysisStatus: 'REQUESTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-  analysisSummary: string;
-  aiResponseData: any;
-  createdAt: string;
-  updatedAt: string;
-  errorMessage?: string;
+interface SingleAnalysisRecord {
+  id: number
+  puuid: string
+  matchId: string
+  targetPlayerName: string
+  targetChampion?: string
+  matchDuration?: number
+  gameMode?: string
+  status: string
+  analysisSummary: string
+  updatedAt: string
+  createdAt: string
+  aiResponseData?: any
 }
 
-// 듀오 분석 인터페이스
-interface DuoAnalysis {
-  id: number;
-  matchId: string;
-  player1Name: string;
-  player2Name: string;
-  player1Champion: string;
-  player2Champion: string;
-  analysisStatus: 'REQUESTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-  analysisSummary: string;
-  createdAt: string;
-  updatedAt: string;
-  errorMessage?: string;
+interface MultipleAnalysisRecord {
+  id: number
+  puuid: string
+  targetPlayerName: string
+  matchCount: number
+  analyzedMatchIds: string[]
+  analysisPeriod: string
+  totalGamesFound: number
+  status: string
+  analysisSummary: string
+  updatedAt: string
+  createdAt: string
+  aiResponseData?: any
 }
 
-type AnalysisType = 'SINGLE' | 'MULTIPLE' | 'DUO';
+interface DuoAnalysisRecord {
+  id: number
+  matchId: string
+  player1Name: string
+  player2Name: string
+  player1Champion: string
+  player2Champion: string
+  status: string
+  analysisSummary: string
+  comparisonResult?: any
+  updatedAt: string
+  createdAt: string
+}
 
-export default function MatchHistory() {
-  const apiFetch = useApi();
-  const [activeTab, setActiveTab] = useState<AnalysisType>('SINGLE');
-  const [singleAnalyses, setSingleAnalyses] = useState<SingleAnalysis[]>([]);
-  const [multipleAnalyses, setMultipleAnalyses] = useState<MultipleAnalysis[]>([]);
-  const [duoAnalyses, setDuoAnalyses] = useState<DuoAnalysis[]>([]);
-  const [filteredSingleAnalyses, setFilteredSingleAnalyses] = useState<SingleAnalysis[]>([]);
-  const [filteredMultipleAnalyses, setFilteredMultipleAnalyses] = useState<MultipleAnalysis[]>([]);
-  const [filteredDuoAnalyses, setFilteredDuoAnalyses] = useState<DuoAnalysis[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedSingleAnalysis, setSelectedSingleAnalysis] = useState<SingleAnalysis | null>(null);
-  const [selectedMultipleAnalysis, setSelectedMultipleAnalysis] = useState<MultipleAnalysis | null>(null);
-  const [selectedDuoAnalysis, setSelectedDuoAnalysis] = useState<DuoAnalysis | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+const MatchHistory = () => {
+  const apiFetch = useApi()
+  const [activeTab, setActiveTab] = useState("single")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedRecord, setSelectedRecord] = useState<any>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>("")
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  
+  // 데이터 상태
+  const [singleRecords, setSingleRecords] = useState<SingleAnalysisRecord[]>([])
+  const [multipleRecords, setMultipleRecords] = useState<MultipleAnalysisRecord[]>([])
+  const [duoRecords, setDuoRecords] = useState<DuoAnalysisRecord[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
 
-  // 단일 분석 기록 로드
-  const loadSingleAnalyses = async () => {
+  // 전체 개수 상태
+  const [singleCount, setSingleCount] = useState(0)
+  const [multipleCount, setMultipleCount] = useState(0)
+  const [duoCount, setDuoCount] = useState(0)
+
+  const loadData = useCallback(async (tab: string, page: number) => {
+    setLoading(true)
+    setError("")
     try {
-      const response = await apiFetch('/api/analysis/status/COMPLETED?page=0&size=20');
-      const singleResults = response.content?.filter((item: any) => item.analysisType === 'SINGLE') || [];
-      setSingleAnalyses(singleResults);
-      setFilteredSingleAnalyses(singleResults);
+      let response;
+      switch (tab) {
+        case "single":
+          response = await apiFetch(`/api/analysis/single/status/COMPLETED?page=${page}&size=20`)
+          if (response.content) {
+            setSingleRecords(response.content)
+            setTotalPages(response.totalPages)
+          }
+          break
+        case "multiple":
+          response = await apiFetch(`/api/analysis/multiple/status/COMPLETED?page=${page}&size=20`)
+          if (response.content) {
+            setMultipleRecords(response.content)
+            setTotalPages(response.totalPages)
+          }
+          break
+        case "duo":
+          response = await apiFetch(`/api/analysis/duo/status/COMPLETED?page=${page}&size=20`)
+          if (response.content) {
+            setDuoRecords(response.content)
+            setTotalPages(response.totalPages)
+          }
+          break
+      }
     } catch (err) {
-      console.error('단일 분석 기록 로드 실패:', err);
-    }
-  };
-
-  // 다중 분석 기록 로드
-  const loadMultipleAnalyses = async () => {
-    try {
-      const response = await apiFetch('/api/analysis/status/COMPLETED?page=0&size=20');
-      const multipleResults = response.content?.filter((item: any) => item.analysisType === 'MULTIPLE') || [];
-      setMultipleAnalyses(multipleResults);
-      setFilteredMultipleAnalyses(multipleResults);
-    } catch (err) {
-      console.error('다중 분석 기록 로드 실패:', err);
-    }
-  };
-
-  // 듀오 분석 기록 로드
-  const loadDuoAnalyses = async () => {
-    try {
-      const response = await apiFetch('/api/analysis/duo/status/COMPLETED?page=0&size=20');
-      const duoResults = response.content || [];
-      setDuoAnalyses(duoResults);
-      setFilteredDuoAnalyses(duoResults);
-    } catch (err) {
-      console.error('듀오 분석 기록 로드 실패:', err);
-    }
-  };
-
-  // 전체 분석 기록 로드
-  const loadAllAnalyses = async () => {
-    console.log('loadAllAnalyses 함수 호출됨');
-    setIsLoading(true);
-    setError(null);
-    try {
-      console.log('API 호출 시작');
-      await Promise.all([loadSingleAnalyses(), loadMultipleAnalyses(), loadDuoAnalyses()]); // 듀오 분석 로드 추가
-      console.log('API 호출 완료');
-    } catch (err) {
-      console.error('API 호출 오류:', err);
-      setError('분석 기록을 불러오는데 실패했습니다.');
-      console.error(err);
+      console.error('데이터 로드 실패:', err)
+      setError('데이터를 불러오는데 실패했습니다.')
     } finally {
-      setIsLoading(false);
+      setLoading(false)
     }
-  };
+  }, [apiFetch])
+
+  const loadAllCounts = useCallback(async () => {
+    try {
+      const [single, multiple, duo] = await Promise.all([
+        apiFetch(`/api/analysis/single/status/COMPLETED?page=0&size=1`),
+        apiFetch(`/api/analysis/multiple/status/COMPLETED?page=0&size=1`),
+        apiFetch(`/api/analysis/duo/status/COMPLETED?page=0&size=1`)
+      ]);
+      setSingleCount(single.totalElements || 0)
+      setMultipleCount(multiple.totalElements || 0)
+      setDuoCount(duo.totalElements || 0)
+    } catch (err) {
+      console.error('Failed to load counts:', err);
+      setError('분석 기록 개수를 불러오는데 실패했습니다.');
+    }
+  }, [apiFetch]);
 
   useEffect(() => {
-    console.log('컴포넌트 마운트됨, API 호출 시작');
-    loadAllAnalyses();
-  }, []);
+    loadAllCounts()
+  }, [loadAllCounts]);
 
-  // 단일 분석 필터링
   useEffect(() => {
-    let filtered = singleAnalyses;
+    loadData(activeTab, currentPage)
+  }, [activeTab, currentPage, loadData])
 
-    if (statusFilter !== 'ALL') {
-      filtered = filtered.filter(analysis => analysis.analysisStatus === statusFilter);
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(analysis =>
-          analysis.targetPlayerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          analysis.targetChampion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          analysis.matchId?.includes(searchTerm)
-      );
-    }
-
-    setFilteredSingleAnalyses(filtered);
-  }, [singleAnalyses, statusFilter, searchTerm]);
-
-  // 다중 분석 필터링
-  useEffect(() => {
-    let filtered = multipleAnalyses;
-
-    if (statusFilter !== 'ALL') {
-      filtered = filtered.filter(analysis => analysis.analysisStatus === statusFilter);
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(analysis =>
-          analysis.targetPlayerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          analysis.analysisPeriod?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    setFilteredMultipleAnalyses(filtered);
-  }, [multipleAnalyses, statusFilter, searchTerm]);
-
-  //
-  // 듀오 분석 필터링
-  useEffect(() => {
-    let filtered = duoAnalyses;
-
-    if (statusFilter !== 'ALL') {
-      filtered = filtered.filter(analysis => analysis.analysisStatus === statusFilter);
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(analysis =>
-          analysis.player1Name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          analysis.player2Name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          analysis.player1Champion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          analysis.player2Champion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          analysis.matchId?.includes(searchTerm)
-      );
-    }
-
-    setFilteredDuoAnalyses(filtered);
-  }, [duoAnalyses, statusFilter, searchTerm]);
-
-  // 탭 변경 시 선택된 분석 초기화
-  useEffect(() => {
-    setSelectedSingleAnalysis(null);
-    setSelectedMultipleAnalysis(null);
-    setSelectedDuoAnalysis(null);
-  }, [activeTab]);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />완료</Badge>;
-      case 'PROCESSING':
-        return <Badge className="bg-blue-100 text-blue-800"><Loader className="h-3 w-3 mr-1" />처리중</Badge>;
-      case 'FAILED':
-        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="h-3 w-3 mr-1" />실패</Badge>;
-      case 'REQUESTED':
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="h-3 w-3 mr-1" />대기</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    setCurrentPage(0)
+    await loadAllCounts()
+    await loadData(activeTab, 0)
+    setTimeout(() => {
+      setIsRefreshing(false)
+    }, 1000)
+  }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('ko-KR', {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ko-KR', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
+    })
+  }
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString('ko-KR', {
       hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+      minute: '2-digit',
+    })
+  }
 
-  const formatGameDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}분 ${remainingSeconds}초`;
-  };
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return "알 수 없음"
+    const minutes = Math.floor(seconds / 60)
+    return `${minutes}분`
+  }
 
-  // 현재 분석 목록 결정
-  const getCurrentAnalyses = () => {
+  const tabs = [
+    { 
+      id: "single", 
+      label: "단일 게임 분석", 
+      count: singleCount, 
+      icon: User, 
+      color: "from-blue-500 to-cyan-500" 
+    },
+    { 
+      id: "multiple", 
+      label: "종합 게임 분석", 
+      count: multipleCount, 
+      icon: BarChart3, 
+      color: "from-green-500 to-emerald-500" 
+    },
+    { 
+      id: "duo", 
+      label: "듀오 게임 분석", 
+      count: duoCount, 
+      icon: Users, 
+      color: "from-purple-500 to-indigo-500" 
+    },
+  ]
+
+  // 현재 탭의 레코드 가져오기
+  const getCurrentRecords = () => {
     switch (activeTab) {
-      case 'SINGLE':
-        return filteredSingleAnalyses;
-      case 'MULTIPLE':
-        return filteredMultipleAnalyses;
-      case 'DUO':
-        return filteredDuoAnalyses;
+      case "single":
+        return singleRecords
+      case "multiple":
+        return multipleRecords
+      case "duo":
+        return duoRecords
       default:
-        return [];
+        return []
     }
-  };
+  }
 
-  // 현재 선택된 분석 결정
-  const getSelectedAnalysis = () => {
+  // 검색 필터링
+  const filteredRecords = getCurrentRecords().filter((record: any) => {
+    const query = searchQuery.toLowerCase()
+    
     switch (activeTab) {
-      case 'SINGLE':
-        return selectedSingleAnalysis;
-      case 'MULTIPLE':
-        return selectedMultipleAnalysis;
-      case 'DUO':
-        return selectedDuoAnalysis;
+      case "single":
+        return record.targetPlayerName?.toLowerCase().includes(query) ||
+               record.targetChampion?.toLowerCase().includes(query) ||
+               record.matchId?.toLowerCase().includes(query)
+      case "multiple":
+        return record.targetPlayerName?.toLowerCase().includes(query)
+      case "duo":
+        return record.player1Name?.toLowerCase().includes(query) ||
+               record.player2Name?.toLowerCase().includes(query) ||
+               record.player1Champion?.toLowerCase().includes(query) ||
+               record.player2Champion?.toLowerCase().includes(query) ||
+               record.matchId?.toLowerCase().includes(query)
       default:
-        return null;
+        return true
     }
-  };
+  })
 
-  const currentAnalyses = getCurrentAnalyses();
-  const selectedAnalysis = getSelectedAnalysis();
-
-  return (
-      <div className="h-full bg-gray-50">
-        <div className="p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">분석 기록</h1>
-            <p className="text-gray-600 mt-2">저장된 게임 분석 기록을 확인하세요</p>
-          </div>
-
-          {/* 탭 메뉴 - 친구와 비교 탭 */}
-          <div className="mb-6">
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
-                <button
-                    onClick={() => setActiveTab('SINGLE')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'SINGLE'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                >
-                  <FileText className="h-4 w-4 inline mr-2" />
-                  단일 게임 분석 ({filteredSingleAnalyses.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab('MULTIPLE')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'MULTIPLE'
-                            ? 'border-green-500 text-green-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                >
-                  <Target className="h-4 w-4 inline mr-2" />
-                  다중 게임 분석 ({filteredMultipleAnalyses.length})
-                </button>
-                {/* 친구와 비교 탭 */}
-                <button
-                    onClick={() => setActiveTab('DUO')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'DUO'
-                            ? 'border-purple-500 text-purple-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                >
-                  <Users className="h-4 w-4 inline mr-2" />
-                  친구와 비교 ({filteredDuoAnalyses.length})
-                </button>
-              </nav>
-            </div>
-          </div>
-
-          {/* 필터 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div>
-              <Label htmlFor="search">검색</Label>
-              <Input
-                  id="search"
-                  placeholder={
-                    activeTab === 'SINGLE' ? "플레이어명, 챔피언, 매치ID 검색..." :
-                        activeTab === 'MULTIPLE' ? "플레이어명, 분석 기간 검색..." :
-                            "플레이어명, 챔피언, 매치ID 검색..."
-                  }
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-              />
+  const renderRecordCard = (record: any, index: number) => {
+    const isSelected = selectedRecord?.id === record.id
+    
+    return (
+      <div
+        key={record.id}
+        onClick={() => setSelectedRecord(record)}
+        className={`p-6 rounded-2xl border-2 transition-all duration-300 cursor-pointer group hover:scale-102 ${
+          isSelected
+            ? "border-blue-500 bg-blue-50 shadow-lg"
+            : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center text-white font-bold">
+              {(currentPage * 20) + index + 1}
             </div>
             <div>
-              <Label htmlFor="status">상태 필터</Label>
-              <select
-                  id="status"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="ALL">모든 상태</option>
-                <option value="COMPLETED">완료</option>
-                <option value="PROCESSING">처리중</option>
-                <option value="FAILED">실패</option>
-                <option value="REQUESTED">대기</option>
-              </select>
-            </div>
-            <div className="flex items-end">
-              <Button onClick={loadAllAnalyses} disabled={isLoading}>
-                {isLoading ? "새로고침 중..." : "새로고침"}
-              </Button>
+              {activeTab === "single" && (
+                <>
+                  <h4 className="font-bold text-lg text-gray-900">{record.targetPlayerName}</h4>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    {record.targetChampion && (
+                      <Badge className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white">
+                        {record.targetChampion}
+                      </Badge>
+                    )}
+                    <span className="text-sm font-mono">{record.matchId}</span>
+                  </div>
+                </>
+              )}
+              
+              {activeTab === "multiple" && (
+                <>
+                  <h4 className="font-bold text-lg text-gray-900">{record.targetPlayerName}</h4>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                      {record.matchCount}게임 종합분석
+                    </Badge>
+                    <span className="text-sm text-gray-500">{record.analysisPeriod}</span>
+                  </div>
+                </>
+              )}
+              
+              {activeTab === "duo" && (
+                <>
+                  <h4 className="font-bold text-lg text-gray-900">
+                    {record.player1Name} & {record.player2Name}
+                  </h4>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    {record.player1Champion && (
+                      <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                        {record.player1Champion}
+                      </Badge>
+                    )}
+                    {record.player2Champion && (
+                      <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                        {record.player2Champion}
+                      </Badge>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
-
-          {error && (
-              <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                {error}
+          
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="flex items-center gap-2 text-gray-500 mb-1">
+                <Calendar className="w-4 h-4" />
+                <span className="text-sm">{formatDate(record.createdAt)}</span>
+                <Clock className="w-4 h-4" />
+                <span className="text-sm">{formatTime(record.createdAt)}</span>
               </div>
-          )}
-
-          {isLoading ? (
-              <div className="text-center py-12">
-                <Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
-                <p>분석 기록을 불러오는 중...</p>
+              <div className="flex items-center gap-2">
+                {activeTab === "single" && record.matchDuration && (
+                  <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                    {formatDuration(record.matchDuration)}
+                  </Badge>
+                )}
+                {activeTab === "multiple" && (
+                  <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
+                    총 {record.totalGamesFound}게임 조회
+                  </Badge>
+                )}
               </div>
-          ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 분석 목록 */}
-                <div className="space-y-4">
-                  <h2 className="text-lg font-semibold">
-                    {activeTab === 'SINGLE' ? '단일 게임 분석' :
-                        activeTab === 'MULTIPLE' ? '다중 게임 분석' :
-                            '친구와 비교'} ({currentAnalyses.length}개)
-                  </h2>
-
-                  {currentAnalyses.length === 0 ? (
-                      <Card>
-                        <CardContent className="py-8 text-center">
-                          <p className="text-gray-500">분석 기록이 없습니다.</p>
-                          <Link to={activeTab === 'DUO' ? "/duo-comparison" : "/ai-analysis"} className="mt-4 inline-block">
-                            <Button>새 분석 시작하기</Button>
-                          </Link>
-                        </CardContent>
-                      </Card>
-                  ) : (
-                      currentAnalyses.map((analysis) => (
-                          <Card
-                              key={analysis.id}
-                              className={`cursor-pointer transition-all hover:shadow-md ${
-                                  selectedAnalysis?.id === analysis.id ? 'ring-2 ring-blue-500' : ''
-                              } ${
-                                  activeTab === 'SINGLE' ? 'border-l-4 border-l-blue-500' :
-                                      activeTab === 'MULTIPLE' ? 'border-l-4 border-l-green-500' :
-                                          'border-l-4 border-l-purple-500'
-                              }`}
-                              onClick={() => {
-                                if (activeTab === 'SINGLE') {
-                                  setSelectedSingleAnalysis(analysis as SingleAnalysis);
-                                } else if (activeTab === 'MULTIPLE') {
-                                  setSelectedMultipleAnalysis(analysis as MultipleAnalysis);
-                                } else if (activeTab === 'DUO') {
-                                  setSelectedDuoAnalysis(analysis as DuoAnalysis);
-                                }
-                              }}
-                          >
-                            <CardHeader>
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <CardTitle className="text-base">
-                                    {activeTab === 'DUO' ?
-                                        `${(analysis as DuoAnalysis).player1Name} vs ${(analysis as DuoAnalysis).player2Name}` :
-                                        (analysis as SingleAnalysis | MultipleAnalysis).targetPlayerName || '알 수 없는 플레이어'
-                                    }
-                                  </CardTitle>
-                                  <CardDescription className="flex items-center gap-2 mt-1">
-                                    {activeTab === 'SINGLE' ? (
-                                        <>
-                                          {(analysis as SingleAnalysis).targetChampion && (
-                                              <span className="flex items-center">
-                                                <Trophy className="h-3 w-3 mr-1" />
-                                                {(analysis as SingleAnalysis).targetChampion}
-                                              </span>
-                                          )}
-                                          {(analysis as SingleAnalysis).matchId && (
-                                              <span className="text-xs text-gray-500">
-                                                {(analysis as SingleAnalysis).matchId}
-                                              </span>
-                                          )}
-                                        </>
-                                    ) : activeTab === 'MULTIPLE' ? (
-                                        <>
-                                          <span className="flex items-center">
-                                            <Target className="h-3 w-3 mr-1" />
-                                            {(analysis as MultipleAnalysis).analysisPeriod}
-                                          </span>
-                                          <span className="text-xs text-gray-500">
-                                            {(analysis as MultipleAnalysis).matchCount}게임
-                                          </span>
-                                        </>
-                                    ) : (
-                                        <>
-                                          <span className="flex items-center">
-                                            <Users className="h-3 w-3 mr-1" />
-                                            {(analysis as DuoAnalysis).player1Champion} vs {(analysis as DuoAnalysis).player2Champion}
-                                          </span>
-                                          <span className="text-xs text-gray-500">
-                                            {(analysis as DuoAnalysis).matchId}
-                                          </span>
-                                        </>
-                                    )}
-                                  </CardDescription>
-                                </div>
-                                {getStatusBadge(analysis.analysisStatus)}
-                              </div>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="flex items-center text-sm text-gray-500">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {formatDate(analysis.createdAt)}
-                              </div>
-                              {analysis.errorMessage && (
-                                  <div className="mt-2 text-sm text-red-600">
-                                    오류: {analysis.errorMessage}
-                                  </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                      ))
-                  )}
-                </div>
-
-                {/* 분석 상세 */}
-                <div className="space-y-4">
-                  <h2 className="text-lg font-semibold mb-4">분석 상세</h2>
-
-                  {selectedAnalysis ? (
-                      <Card>
-                        <CardHeader>
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <CardTitle>
-                                {activeTab === 'DUO' ?
-                                    `${(selectedAnalysis as DuoAnalysis).player1Name} vs ${(selectedAnalysis as DuoAnalysis).player2Name}` :
-                                    (selectedAnalysis as SingleAnalysis | MultipleAnalysis).targetPlayerName
-                                }
-                              </CardTitle>
-                              <CardDescription>
-                                {activeTab === 'SINGLE' && (selectedAnalysis as SingleAnalysis).targetChampion &&
-                                    `${(selectedAnalysis as SingleAnalysis).targetChampion} • `
-                                }
-                                {activeTab === 'MULTIPLE' &&
-                                    `${(selectedAnalysis as MultipleAnalysis).analysisPeriod} • `
-                                }
-                                {activeTab === 'DUO' &&
-                                    `${(selectedAnalysis as DuoAnalysis).player1Champion} vs ${(selectedAnalysis as DuoAnalysis).player2Champion} • `
-                                }
-                                {formatDate(selectedAnalysis.createdAt)}
-                              </CardDescription>
-                            </div>
-                            {getStatusBadge(selectedAnalysis.analysisStatus)}
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          {/* 단일 분석 정보 */}
-                          {activeTab === 'SINGLE' && (
-                              <div className="space-y-3 mb-4">
-                                <div className="p-3 bg-blue-50 rounded">
-                                  <Label>매치 정보</Label>
-                                  <div className="mt-2 space-y-1">
-                                    <p className="font-mono text-sm">{(selectedAnalysis as SingleAnalysis).matchId}</p>
-                                    {(selectedAnalysis as SingleAnalysis).gameMode && (
-                                        <p className="text-sm text-gray-600">
-                                          게임 모드: {(selectedAnalysis as SingleAnalysis).gameMode}
-                                        </p>
-                                    )}
-                                    {(selectedAnalysis as SingleAnalysis).matchDuration && (
-                                        <p className="text-sm text-gray-600">
-                                          플레이 시간: {formatGameDuration((selectedAnalysis as SingleAnalysis).matchDuration!)}
-                                        </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                          )}
-
-                          {/* 다중 분석 정보 */}
-                          {activeTab === 'MULTIPLE' && (
-                              <div className="space-y-3 mb-4">
-                                <div className="p-3 bg-green-50 rounded">
-                                  <Label>분석 정보</Label>
-                                  <div className="mt-2 space-y-1">
-                                    <p className="text-sm">
-                                      <strong>분석 기간:</strong> {(selectedAnalysis as MultipleAnalysis).analysisPeriod}
-                                    </p>
-                                    <p className="text-sm">
-                                      <strong>분석된 게임:</strong> {(selectedAnalysis as MultipleAnalysis).matchCount}개
-                                    </p>
-                                    <p className="text-sm">
-                                      <strong>총 조회된 게임:</strong> {(selectedAnalysis as MultipleAnalysis).totalGamesFound}개
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div className="p-3 bg-gray-50 rounded">
-                                  <Label>분석된 매치 ID</Label>
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    {(selectedAnalysis as MultipleAnalysis).analyzedMatchIds?.map((matchId, index) => (
-                                        <span key={index} className="bg-white px-2 py-1 rounded text-xs font-mono border">
-                                          {matchId}
-                                        </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                          )}
-
-                          {/* 듀오 분석 정보 */}
-                          {activeTab === 'DUO' && (
-                              <div className="space-y-3 mb-4">
-                                <div className="p-3 bg-purple-50 rounded">
-                                  <Label>듀오 매치 정보</Label>
-                                  <div className="mt-2 space-y-1">
-                                    <p className="font-mono text-sm">{(selectedAnalysis as DuoAnalysis).matchId}</p>
-                                    <div className="grid grid-cols-2 gap-4 mt-2">
-                                      <div>
-                                        <p className="text-sm font-medium text-purple-700">플레이어 1</p>
-                                        <p className="text-sm">{(selectedAnalysis as DuoAnalysis).player1Name}</p>
-                                        <p className="text-sm text-gray-600">{(selectedAnalysis as DuoAnalysis).player1Champion}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium text-purple-700">플레이어 2</p>
-                                        <p className="text-sm">{(selectedAnalysis as DuoAnalysis).player2Name}</p>
-                                        <p className="text-sm text-gray-600">{(selectedAnalysis as DuoAnalysis).player2Champion}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                          )}
-
-                          {/* 분석 결과 */}
-                          {selectedAnalysis.analysisStatus === 'COMPLETED' ? (
-                              <div>
-                                <Label>AI 분석 결과</Label>
-                                <div className="mt-2 prose prose-sm max-w-none bg-white p-4 rounded border">
-                                  <ReactMarkdown>{selectedAnalysis.analysisSummary}</ReactMarkdown>
-                                </div>
-                              </div>
-                          ) : selectedAnalysis.analysisStatus === 'FAILED' ? (
-                              <div className="text-red-600">
-                                <Label>오류 메시지</Label>
-                                <p className="mt-2 p-3 bg-red-50 rounded">{selectedAnalysis.errorMessage}</p>
-                              </div>
-                          ) : (
-                              <div className="text-center py-8 text-gray-500">
-                                <Loader className="h-6 w-6 animate-spin mx-auto mb-2" />
-                                <p>분석이 진행 중입니다...</p>
-                              </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                  ) : (
-                      <Card>
-                        <CardContent className="py-8 text-center text-gray-500">
-                          분석 기록을 선택하면 상세 내용을 확인할 수 있습니다.
-                        </CardContent>
-                      </Card>
-                  )}
-                </div>
-              </div>
-          )}
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-500" />
+              <Badge className="bg-green-100 text-green-700 font-semibold">
+                {record.status === 'COMPLETED' ? '완료' : record.status}
+              </Badge>
+            </div>
+          </div>
         </div>
       </div>
-  );
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-cyan-400/20 to-blue-600/20 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-purple-400/10 to-pink-400/10 rounded-full blur-3xl animate-pulse delay-500" />
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-7xl relative z-10">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-lg opacity-75 group-hover:opacity-100 transition-opacity animate-pulse" />
+              <div className="relative bg-white p-4 rounded-full shadow-2xl">
+                <History className="w-12 h-12 text-blue-600" />
+              </div>
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full animate-bounce">
+                <Star className="w-4 h-4 text-white m-1" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-5xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+                분석 기록
+              </h1>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-100" />
+                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse delay-200" />
+              </div>
+            </div>
+          </div>
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">지금껏 게임 분석 기록을 확인하세요</p>
+          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
+            <Gamepad2 className="w-4 h-4" />
+            <span>모든 분석 기록을 한 곳에서 관리</span>
+          </div>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+            <div className="flex items-center">
+              <AlertTriangle className="w-5 h-5 mr-2" />
+              {error}
+            </div>
+          </div>
+        )}
+
+        {/* Tab Navigation */}
+        <div className="flex flex-wrap justify-center mb-12 bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl p-3 border border-white/20">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id)
+                setCurrentPage(0)
+                setSelectedRecord(null)
+              }}
+              className={`flex items-center px-6 py-4 rounded-xl m-1 transition-all duration-300 group relative overflow-hidden ${
+                activeTab === tab.id
+                  ? "bg-gradient-to-r text-white shadow-xl scale-105"
+                  : "text-gray-600 hover:bg-gray-50 hover:scale-102"
+              }`}
+              style={{
+                background:
+                  activeTab === tab.id
+                    ? `linear-gradient(135deg, ${tab.color.split(" ")[1]}, ${tab.color.split(" ")[3]})`
+                    : undefined,
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <tab.icon className="w-5 h-5 mr-3 relative z-10" />
+              <span className="font-semibold relative z-10">{tab.label}</span>
+              <Badge
+                className={`ml-3 relative z-10 ${
+                  activeTab === tab.id ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600 group-hover:bg-gray-200"
+                }`}
+              >
+                {tab.count}
+              </Badge>
+            </button>
+          ))}
+        </div>
+
+        {/* Search and Filter Section */}
+        <Card className="mb-8 overflow-hidden border-0 shadow-2xl backdrop-blur-xl bg-white/80">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="flex-1 relative group">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="플레이어명, 챔피언, 매치ID 검색..."
+                  className="pl-12 h-12 rounded-2xl border-2 border-gray-200 focus:border-blue-500 transition-all duration-300"
+                />
+              </div>
+              <Button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 hover:scale-105"
+              >
+                {isRefreshing ? (
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-5 h-5 mr-2" />
+                )}
+                새로고침
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Main Content */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Records List */}
+          <div className="lg:col-span-2">
+            <Card className="border-0 shadow-2xl backdrop-blur-xl bg-white/80 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-100">
+                <CardTitle className="flex items-center text-2xl">
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mr-4">
+                    <History className="w-6 h-6 text-white" />
+                  </div>
+                  {tabs.find((tab) => tab.id === activeTab)?.label} ({tabs.find((tab) => tab.id === activeTab)?.count || 0}개)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500 mr-3" />
+                    <span className="text-gray-500">분석 기록을 불러오는 중...</span>
+                  </div>
+                ) : filteredRecords.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Sparkles className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 leading-relaxed">
+                      {searchQuery ? '검색 결과가 없습니다.' : '분석 기록이 없습니다.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-[600px] overflow-y-auto p-1">
+                    {filteredRecords.map((record, index) => renderRecordCard(record, index))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Analysis Detail */}
+          <div className="lg:col-span-1">
+            <Card className="border-0 shadow-2xl backdrop-blur-xl bg-white/80 overflow-hidden sticky top-8">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-100">
+                <CardTitle className="flex items-center text-2xl">
+                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-4">
+                    <Eye className="w-6 h-6 text-white" />
+                  </div>
+                  분석 상세
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-8">
+                {selectedRecord ? (
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Target className="w-8 h-8 text-white" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        {activeTab === "single" 
+                          ? selectedRecord.targetPlayerName
+                          : activeTab === "multiple"
+                            ? selectedRecord.targetPlayerName
+                            : `${selectedRecord.player1Name} & ${selectedRecord.player2Name}`
+                        }
+                      </h3>
+                      <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold px-4 py-2">
+                        {selectedRecord.status === 'COMPLETED' ? '완료' : selectedRecord.status}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                        <h4 className="font-semibold text-blue-900 mb-2 flex items-center">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          분석 일시
+                        </h4>
+                        <p className="text-blue-700">
+                          {formatDate(selectedRecord.createdAt)} {formatTime(selectedRecord.createdAt)}
+                        </p>
+                      </div>
+
+                      {activeTab === "single" && (
+                        <>
+                          {selectedRecord.targetChampion && (
+                            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                              <h4 className="font-semibold text-purple-900 mb-2 flex items-center">
+                                <Star className="w-4 h-4 mr-2" />
+                                챔피언
+                              </h4>
+                              <Badge className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white">
+                                {selectedRecord.targetChampion}
+                              </Badge>
+                            </div>
+                          )}
+                          
+                          {selectedRecord.matchDuration && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                              <h4 className="font-semibold text-yellow-900 mb-2 flex items-center">
+                                <Clock className="w-4 h-4 mr-2" />
+                                게임 시간
+                              </h4>
+                              <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                                {formatDuration(selectedRecord.matchDuration)}
+                              </Badge>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {activeTab === "multiple" && (
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                          <h4 className="font-semibold text-green-900 mb-2 flex items-center">
+                            <BarChart3 className="w-4 h-4 mr-2" />
+                            종합 분석 정보
+                          </h4>
+                          <div className="space-y-2">
+                            <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                              {selectedRecord.matchCount}게임 분석
+                            </Badge>
+                            <p className="text-green-700 text-sm">
+                              총 {selectedRecord.totalGamesFound}게임 중 분석 완료
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {activeTab === "duo" && (
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                          <h4 className="font-semibold text-indigo-900 mb-2 flex items-center">
+                            <Users className="w-4 h-4 mr-2" />
+                            듀오 정보
+                          </h4>
+                          <div className="space-y-2">
+                            {selectedRecord.player1Champion && (
+                              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white mr-2">
+                                {selectedRecord.player1Champion}
+                              </Badge>
+                            )}
+                            {selectedRecord.player2Champion && (
+                              <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                                {selectedRecord.player2Champion}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedRecord.analysisSummary && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 max-h-96 overflow-y-auto">
+                        <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                          <Brain className="w-4 h-4 mr-2" />
+                          AI 분석 결과 (미리보기)
+                        </h4>
+                        <div className="prose prose-sm max-w-none text-gray-700 line-clamp-6">
+                          <ReactMarkdown>
+                            {selectedRecord.analysisSummary.substring(0, 300) + 
+                             (selectedRecord.analysisSummary.length > 300 ? '...' : '')}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+
+                    <Button 
+                      onClick={() => setIsModalOpen(true)}
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 font-semibold py-3 rounded-2xl transition-all duration-300 hover:scale-105"
+                    >
+                      <Brain className="w-5 h-5 mr-2" />
+                      상세 분석 보기
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Sparkles className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 leading-relaxed">
+                      분석 기록을 선택하면
+                      <br />
+                      상세 내용을 확인할 수 있습니다
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+      {isModalOpen && selectedRecord && (
+        <AnalysisDetailModal 
+          record={selectedRecord} 
+          onClose={() => setIsModalOpen(false)} 
+          activeTab={activeTab} 
+        />
+      )}
+    </div>
+  )
 }
+
+export default MatchHistory
