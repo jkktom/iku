@@ -132,19 +132,21 @@ public class SingleAnalysisPrompt {
         // 분석 요청 (티어와 포지션, 챔피언 맞춤형)
         prompt.append("이 데이터를 바탕으로 다음 항목들을 상세히 분석해주세요:\n\n");
         
-        prompt.append("**중요: 플레이어의 현재 티어와 포지션, 선택한 챔피언의 특성을 반드시 고려하여 분석해주세요.**\n");
+        prompt.append("**중요: 플레이어의 현재 포지션, 선택한 챔피언의 특성을 반드시 고려하여 분석해주세요.**\n");
+
+
         
-        // 티어별 맞춤 분석 요청
-        if (riotUserInfo != null) {
-            String soloTier = (String) riotUserInfo.get("soloTier");
-            String position = (String) playerInfo.get("teamPosition");
-            String champion = (String) playerInfo.get("championName");
-            
-            if (soloTier != null) {
-                prompt.append("- 이 플레이어는 **").append(soloTier).append(" 티어**이므로, 해당 티어에 맞는 수준의 기대치와 개선점을 제시해주세요.\n");
-                prompt.append("- **").append(position).append(" 포지션**의 ").append(champion).append(" 챔피언으로서 이 티어에서 필요한 핵심 스킬과 역할을 중심으로 분석해주세요.\n\n");
-            }
-        }
+//        // 티어별 맞춤 분석 요청
+//        if (riotUserInfo != null) {
+//            String soloTier = (String) riotUserInfo.get("soloTier");
+//            String position = (String) playerInfo.get("teamPosition");
+//            String champion = (String) playerInfo.get("championName");
+//
+//            if (soloTier != null) {
+//                prompt.append("- 이 플레이어는 **").append(soloTier).append(" 티어**이므로, 해당 티어에 맞는 수준의 기대치와 개선점을 제시해주세요.\n");
+//                prompt.append("- **").append(position).append(" 포지션**의 ").append(champion).append(" 챔피언으로서 이 티어에서 필요한 핵심 스킬과 역할을 중심으로 분석해주세요.\n\n");
+//            }
+//        }
 
         prompt.append("1. **라인전 및 초반 운영** (0-15분)\n");
         prompt.append("   - 해당 티어 기준 파밍 효율성 및 CS 관리 평가\n");

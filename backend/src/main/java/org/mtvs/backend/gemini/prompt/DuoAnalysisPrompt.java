@@ -457,13 +457,28 @@ public class DuoAnalysisPrompt {
         framework.append("• 다음 게임에서 집중해야 할 핵심 포인트\n");
         framework.append("• 장기적인 듀오 발전 방향\n\n");
 
-        framework.append("**4단계: 종합 평가 및 권장사항 (Overall Assessment)**\n");
+        framework.append("**4단계: 종합 평가 및 MVP/최고 선전 플레이어 선정 (Overall Assessment & MVP Selection)**\n");
         framework.append("듀오 플레이 종합 평가를 제공하십시오.\n");
         framework.append("• 각 플레이어의 실력 수준 평가\n");
         framework.append("• 전체적인 듀오 플레이 등급\n");
         framework.append("• 이 듀오 조합의 잠재력과 한계\n");
         framework.append("• 승률을 높이기 위한 추천 챔피언 조합\n");
         framework.append("• 단계별 성장 로드맵 (단기/중기/장기)\n\n");
+        
+        framework.append("**🏆 특별 섹션: 이번 게임의 결정적 플레이어 선정**\n");
+        framework.append("위의 모든 데이터를 바탕으로 나와 내 친구 중 '가장 결정적인 영향을 미친 플레이어' 한 명을 선정해주세요:\n\n");
+        framework.append("• **게임 결과가 '승리'였다면**: '이번 게임의 MVP'로 선정하고 승리의 핵심 요인을 짚어주세요.\n");
+        framework.append("• **게임 결과가 '패배'였다면**: '졌지만 가장 잘 싸운 플레이어'로 선정하고 어려운 상황 속에서도 빛났던 점을 칭찬해주세요.\n\n");
+        framework.append("**선정 기준:**\n");
+        framework.append("• 단순 KDA나 딜량이 아닌 게임 흐름에 미친 실질적 영향력\n");
+        framework.append("• 중요한 순간의 의사결정과 플레이 퀄리티\n");
+        framework.append("• 팀원을 도우며 보여준 협력과 희생정신\n");
+        framework.append("• 포지션 역할 수행도와 상황 대응력\n\n");
+        framework.append("**발표 스타일:**\n");
+        framework.append("• 친구와 함께 볼 때 재미있도록 재치있게 설명\n");
+        framework.append("• 구체적인 데이터와 상황을 근거로 제시\n");
+        framework.append("• 선정되지 않은 플레이어도 격려하는 따뜻한 톤\n");
+        framework.append("• 다음 게임에서의 기대감을 높이는 마무리\n\n");
 
         framework.append("**중요 지침:**\n");
         framework.append("• 수치 데이터와 구체적인 게임 상황을 근거로 분석\n");

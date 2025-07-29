@@ -6,6 +6,7 @@ import org.mtvs.backend.analysis.repository.DuoMatchAnalysisRepository;
 import org.mtvs.backend.gemini.service.GameAnalysisService;
 import org.mtvs.backend.riot.dto.AccountDto;
 import org.mtvs.backend.riot.dto.MatchDetailDto;
+import org.mtvs.backend.riot.dto.MatchTimelineDto;
 import org.mtvs.backend.riot.dto.ParticipantDto;
 import org.mtvs.backend.riot.service.RiotService;
 import org.mtvs.backend.analysis.entity.AnalysisStatus;
@@ -137,13 +138,22 @@ public class DuoMatchAnalysisService {
             // 5. 매치 데이터 조회
             MatchDetailDto matchDetail = riotService.getMatchDetail(matchId);
 
-            // 6. 두 플레이어의 데이터 추출
-            Map<String, Object> player1Data = extractPlayerDataFromMatch(matchDetail, player1Account.getPuuid());
-            Map<String, Object> player2Data = extractPlayerDataFromMatch(matchDetail, player2Account.getPuuid());
+            // 6. GameAnalysisService를 통한 전체 데이터 추출 (일관성을 위해)
+            // matchTimeline 추가 조회
+            MatchTimelineDto matchTimeline = riotService.getMatchTimeline(matchId);
+            
+            // GameAnalysisService의 extractPlayerData를 사용하여 풍부한 데이터 추출
+            Map<String, Object> player1FullData = gameAnalysisService.extractPlayerDataForDuo(matchDetail, matchTimeline, player1Account.getPuuid());
+            Map<String, Object> player2FullData = gameAnalysisService.extractPlayerDataForDuo(matchDetail, matchTimeline, player2Account.getPuuid());
 
-            // 7. 챔피언 정보 설정
-            String player1Champion = (String) player1Data.get("championName");
-            String player2Champion = (String) player2Data.get("championName");
+            // 7. 챔피언 정보 설정 (playerInfo에서 추출)
+            @SuppressWarnings("unchecked")
+            Map<String, Object> player1Info = (Map<String, Object>) player1FullData.get("playerInfo");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> player2Info = (Map<String, Object>) player2FullData.get("playerInfo");
+            
+            String player1Champion = (String) player1Info.get("championName");
+            String player2Champion = (String) player2Info.get("championName");
 
             analysis.setPlayer1Champion(player1Champion);
             analysis.setPlayer2Champion(player2Champion);
@@ -152,13 +162,15 @@ public class DuoMatchAnalysisService {
                     analysis.getPlayer1Name(), player1Champion,
                     analysis.getPlayer2Name(), player2Champion);
 
+            // 8. 성과 비교 분석 (기본 데이터에서 추출)
+            Map<String, Object> player1BasicData = extractPlayerDataFromMatch(matchDetail, player1Account.getPuuid());
+            Map<String, Object> player2BasicData = extractPlayerDataFromMatch(matchDetail, player2Account.getPuuid());
+            Map<String, Object> comparisonResult = performComparison(player1BasicData, player2BasicData);
 
-            // 8. 성과 비교 분석
-            Map<String, Object> comparisonResult = performComparison(player1Data,player2Data);
-
-            // 9. AI 분석 수행
-            String aiResponse = gameAnalysisService.analyzeDuoMatch(
-                    player1Name, player1Tag, player2Name, player2Tag,matchId
+            // 9. AI 분석 수행 (풍부한 데이터를 직접 전달)
+            String aiResponse = gameAnalysisService.analyzeDuoMatchWithData(
+                    player1FullData, player2FullData,
+                    player1Name, player1Tag, player2Name, player2Tag, matchId
             );
 
             // 10. 결과 저장
@@ -352,19 +364,21 @@ public class DuoMatchAnalysisService {
                 analysis.getPlayer1Name(), analysis.getPlayer2Name(),
                 analysis.getPlayer1Champion(), analysis.getPlayer2Champion());
 
-        Map<String,Object> analysisRecord = new HashMap<>();
-        response.put("id", analysis.getId());
-        response.put("matchId", analysis.getMatchId());
-        response.put("player1Name", analysis.getPlayer1Name());
-        response.put("player2Name", analysis.getPlayer2Name());
-        response.put("player1Champion", analysis.getPlayer1Champion());
-        response.put("player2Champion", analysis.getPlayer2Champion());
-        response.put("status", analysis.getAnalysisStatus().name());
-        response.put("analysisSummary", analysis.getAnalysisSummary());
-        response.put("comparisonResult", analysis.getComparisonResult());
-        response.put("updatedAt", analysis.getUpdatedAt());
-        response.put("createdAt", analysis.getCreatedAt());
+        // 프론트엔드가 기대하는 analysisRecord 구조 구성
+        Map<String, Object> analysisRecord = new HashMap<>();
+        analysisRecord.put("id", analysis.getId());
+        analysisRecord.put("matchId", analysis.getMatchId());
+        analysisRecord.put("player1Name", analysis.getPlayer1Name());
+        analysisRecord.put("player2Name", analysis.getPlayer2Name());
+        analysisRecord.put("player1Champion", analysis.getPlayer1Champion());
+        analysisRecord.put("player2Champion", analysis.getPlayer2Champion());
+        analysisRecord.put("status", analysis.getAnalysisStatus().name());
+        analysisRecord.put("analysisSummary", analysis.getAnalysisSummary());
+        analysisRecord.put("comparisonResult", analysis.getComparisonResult());
+        analysisRecord.put("updatedAt", analysis.getUpdatedAt());
+        analysisRecord.put("createdAt", analysis.getCreatedAt());
 
+        // 응답 구조: 프론트엔드에서 analysisResult.analysisRecord로 접근
         response.put("analysisRecord", analysisRecord);
         response.put("message", "듀오 분석 완료");
 
