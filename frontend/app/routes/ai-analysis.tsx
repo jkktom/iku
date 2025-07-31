@@ -92,8 +92,18 @@ export default function AIAnalysis() {
     setError("");
     
     try {
+      // 입력값 검증
+      const trimmedPlayerName = playerName.trim()
+      const trimmedTagLine = tagLine.trim()
+      
+      if (!trimmedPlayerName || !trimmedTagLine) {
+        setError("플레이어명과 태그를 모두 입력해주세요.");
+        setIsLoadingAccount(false);
+        return;
+      }
+      
       // 1. Riot API로 계정 정보 조회
-      const accountResponse = await apiFetch(`/api/riot/account/${playerName}/${tagLine}`);
+      const accountResponse = await apiFetch(`/api/riot/account/${encodeURIComponent(trimmedPlayerName)}/${encodeURIComponent(trimmedTagLine)}`);
       
       console.log("1. Riot API 응답:", accountResponse);
 

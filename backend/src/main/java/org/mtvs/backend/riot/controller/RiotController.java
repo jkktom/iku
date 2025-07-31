@@ -43,7 +43,21 @@ public class RiotController {
 
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
+            
+            // Riot API 404 에러인 경우 더 친화적인 메시지 제공
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && errorMessage.contains("404")) {
+                errorResponse.put("error", "해당 소환사명을 찾을 수 없습니다. 게임명과 태그를 정확히 입력해주세요.");
+                errorResponse.put("detail", "입력하신 '" + gameName + "#" + tagLine + "' 계정이 존재하지 않습니다.");
+                errorResponse.put("suggestion", "태그는 보통 'KR1', '1234' 등의 형태입니다. 게임 내에서 확인해주세요.");
+            } else if (errorMessage != null && errorMessage.contains("403")) {
+                errorResponse.put("error", "API 키에 문제가 있습니다. 관리자에게 문의해주세요.");
+            } else if (errorMessage != null && errorMessage.contains("429")) {
+                errorResponse.put("error", "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+            } else {
+                errorResponse.put("error", "계정 정보를 조회할 수 없습니다: " + errorMessage);
+            }
+            
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }

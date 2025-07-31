@@ -64,7 +64,7 @@ install_docker_compose() {
 create_env_template() {
     cat > .env << 'EOF'
 # Database
-DB_URL=jdbc:postgresql://localhost:5432/iku-ai-db
+DB_URL=jdbc:postgresql://db:5432/iku-ai-db
 DB_USERNAME=user
 DB_PASSWORD=5656
 

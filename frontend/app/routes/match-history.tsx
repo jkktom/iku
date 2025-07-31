@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useNavigate } from "@remix-run/react"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
 import { Badge } from "~/components/ui/badge"
 import { useApi } from '~/utils/api'
-import ReactMarkdown from "react-markdown"
 import {
   History,
   Search,
@@ -26,46 +26,8 @@ import {
   Brain,
   AlertTriangle,
   Loader2,
-  X,
 } from "lucide-react"
 
-// Modal Component for Analysis Detail
-const AnalysisDetailModal = ({ record, onClose, activeTab }: { record: any; onClose: () => void; activeTab: string }) => {
-  if (!record) return null
-
-  let analysisContent = "";
-  if (activeTab === 'duo') {
-    analysisContent = record.comparisonResult || record.analysisSummary || "상세 분석 내용이 없습니다.";
-  } else {
-    analysisContent = record.aiResponseData?.analysisResult || record.analysisSummary || "상세 분석 내용이 없습니다.";
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4" onClick={onClose}>
-      <div 
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" 
-        onClick={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b p-6">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold text-gray-800 flex items-center">
-              <Brain className="w-7 h-7 mr-3 text-blue-500" />
-              상세 분석 결과
-            </CardTitle>
-            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-              <X className="h-6 w-6" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-8 overflow-y-auto">
-          <div className="prose prose-lg max-w-none">
-            <ReactMarkdown>{analysisContent}</ReactMarkdown>
-          </div>
-        </CardContent>
-      </div>
-    </div>
-  )
-}
 
 interface SingleAnalysisRecord {
   id: number
@@ -113,13 +75,13 @@ interface DuoAnalysisRecord {
 
 const MatchHistory = () => {
   const apiFetch = useApi()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState("single")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRecord, setSelectedRecord] = useState<any>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>("")
-  const [isModalOpen, setIsModalOpen] = useState(false)
   
   // 데이터 상태
   const [singleRecords, setSingleRecords] = useState<SingleAnalysisRecord[]>([])
@@ -654,16 +616,26 @@ const MatchHistory = () => {
                           AI 분석 결과 (미리보기)
                         </h4>
                         <div className="prose prose-sm max-w-none text-gray-700 line-clamp-6">
-                          <ReactMarkdown>
+                          <div className="whitespace-pre-wrap">
                             {selectedRecord.analysisSummary.substring(0, 300) + 
                              (selectedRecord.analysisSummary.length > 300 ? '...' : '')}
-                          </ReactMarkdown>
+                          </div>
                         </div>
                       </div>
                     )}
 
                     <Button 
-                      onClick={() => setIsModalOpen(true)}
+                      onClick={() => {
+                        if (selectedRecord) {
+                          // 상태로 분석 데이터 전달
+                          navigate('/analysis', {
+                            state: {
+                              analysisData: selectedRecord,
+                              analysisType: activeTab
+                            }
+                          })
+                        }
+                      }}
                       className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 font-semibold py-3 rounded-2xl transition-all duration-300 hover:scale-105"
                     >
                       <Brain className="w-5 h-5 mr-2" />
@@ -687,13 +659,6 @@ const MatchHistory = () => {
           </div>
         </div>
       </div>
-      {isModalOpen && selectedRecord && (
-        <AnalysisDetailModal 
-          record={selectedRecord} 
-          onClose={() => setIsModalOpen(false)} 
-          activeTab={activeTab} 
-        />
-      )}
     </div>
   )
 }

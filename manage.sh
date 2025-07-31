@@ -147,21 +147,21 @@ start_services() {
     # 서비스 URL 정보 표시
     if [ "$branch" = "main" ] || [ "$branch" = "all" ]; then
         info "프로덕션 서비스:"
-        info "  Frontend: http://localhost:3000"
-        info "  Backend:  http://localhost:8080"
+        info "  Frontend: https://iku.life"
+        info "  Backend:  https://iku.life/api"
         info "  Database: localhost:5432"
     fi
     
     if [ "$branch" = "dev" ] || [ "$branch" = "all" ]; then
         info "개발 서비스:"
-        info "  Frontend: http://localhost:3001"
-        info "  Backend:  http://localhost:8081"
+        info "  Frontend: https://iku.life (dev port 3001)"
+        info "  Backend:  https://iku.life/api (dev port 8081)"
         info "  Database: localhost:5433"
     fi
     
     if [ "$branch" = "all" ]; then
         info "관리 도구:"
-        info "  Adminer:  http://localhost:8082 (DB 관리)"
+        info "  Adminer:  http://13.125.59.135:8082 (DB 관리)"
     fi
 }
 

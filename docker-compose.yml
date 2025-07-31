@@ -50,7 +50,7 @@ services:
       - iku-main-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -63,7 +63,7 @@ services:
     container_name: iku-main-frontend
     environment:
       - NODE_ENV=production
-      - VITE_API_BASE_URL=http://localhost:8080
+      - VITE_API_BASE_URL=https://iku.life
     env_file:
       - frontend/.env
     ports:
@@ -74,7 +74,7 @@ services:
       - iku-main-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -105,7 +105,7 @@ services:
   backend-dev:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: backend/Dockerfile.dev
     container_name: iku-dev-backend
     environment:
       - SPRING_PROFILES_ACTIVE=dev
@@ -115,8 +115,8 @@ services:
       - SERVER_PORT=8080
       - SHOW_SQL=true
       - LOG_LEVEL_APP=DEBUG
-      - SPRING_REDIS_HOST=redis
-      - SPRING_REDIS_PORT=6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     env_file:
       - backend/.env
     ports:
@@ -141,7 +141,7 @@ services:
     container_name: iku-dev-frontend
     environment:
       - NODE_ENV=development
-      - VITE_API_BASE_URL=http://13.125.59.135:8081
+      - VITE_API_BASE_URL=https://iku.life
     env_file:
       - frontend/.env
     ports:

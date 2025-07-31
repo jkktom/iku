@@ -1,5 +1,5 @@
 import { SignedIn, SignedOut, UserButton, useAuth } from '@clerk/remix'
-import { Link } from '@remix-run/react'
+import { Link, useNavigate } from '@remix-run/react'
 import type { MetaFunction } from "@remix-run/node";
 import { useApi } from '~/utils/api'
 import { useEffect, useState } from 'react'
@@ -7,7 +7,6 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import ReactMarkdown from "react-markdown";
 import {
   Target,
   Play,
@@ -80,13 +79,14 @@ export const meta: MetaFunction = () => {
 export default function Index() {
   const apiFetch = useApi()
   const { isSignedIn } = useAuth()
+  const navigate = useNavigate()
   const [user, setUser] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   
   // 새로운 UI 상태 관리
   const [playerName, setPlayerName] = useState("")
   const [tagLine, setTagLine] = useState("")
-  const [analysisStep, setAnalysisStep] = useState<"input" | "select" | "analyzing" | "results">("input")
+  const [analysisStep, setAnalysisStep] = useState<"input" | "select" | "analyzing">("input")
   const [selectedAnalysisType, setSelectedAnalysisType] = useState<"single" | "comprehensive" | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   
@@ -154,8 +154,18 @@ export default function Index() {
     setApiError("")
 
     try {
-      // 1. 계정 정보 조회
-      const accountResponse = await apiFetch(`/api/riot/account/${encodeURIComponent(playerName)}/${encodeURIComponent(tagLine)}`);
+      // 1. 계정 정보 조회 (trim spaces)
+      const trimmedPlayerName = playerName.trim()
+      const trimmedTagLine = tagLine.trim()
+      
+      if (!trimmedPlayerName || !trimmedTagLine) {
+        setApiError("플레이어명과 태그를 모두 입력해주세요.");
+        setAnalysisStep("select")
+        setIsAnalyzing(false)
+        return;
+      }
+      
+      const accountResponse = await apiFetch(`/api/riot/account/${encodeURIComponent(trimmedPlayerName)}/${encodeURIComponent(trimmedTagLine)}`);
       
       if (!accountResponse.account) {
         setApiError("계정 정보를 찾을 수 없습니다.");
@@ -185,6 +195,15 @@ export default function Index() {
         
         setSingleAnalysisResult(analysisResponse);
         setMultipleAnalysisResult(null);
+        
+        // 단일 분석 완료 후 분석 페이지로 리다이렉트
+        navigate('/analysis', {
+          state: {
+            analysisData: analysisResponse.analysisRecord,
+            analysisType: 'single'
+          }
+        });
+        return;
       } else {
         // 다중 게임 분석
         const analysisResponse = await apiFetch(
@@ -194,9 +213,16 @@ export default function Index() {
         
         setMultipleAnalysisResult(analysisResponse);
         setSingleAnalysisResult(null);
+        
+        // 다중 분석 완료 후 분석 페이지로 리다이렉트
+        navigate('/analysis', {
+          state: {
+            analysisData: analysisResponse.analysisRecord,
+            analysisType: 'multiple'
+          }
+        });
+        return;
       }
-
-      setAnalysisStep("results")
     } catch (err) {
       console.error("분석 오류:", err);
       setApiError("분석에 실패했습니다. 다시 시도해주세요.");
@@ -324,7 +350,7 @@ export default function Index() {
 
                   <Button
                     onClick={handleStartAnalysis}
-                    disabled={!playerName || !tagLine}
+                    disabled={!playerName.trim() || !tagLine.trim()}
                     className="bg-white text-blue-600 hover:bg-blue-50 font-bold px-10 py-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 disabled:opacity-50 text-lg group"
                   >
                     <Play className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
@@ -467,118 +493,6 @@ export default function Index() {
           </div>
         </Card>
 
-        {/* Results Section */}
-        {analysisStep === "results" && (singleAnalysisResult || multipleAnalysisResult) && (
-          <div className="space-y-8">
-            {/* Single Game Analysis Result */}
-            {singleAnalysisResult && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-blue-700">단일 게임 분석 결과</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-blue-50 border border-blue-200 p-4 rounded">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p><strong>플레이어:</strong> {singleAnalysisResult.analysisRecord.targetPlayerName}</p>
-                          <p><strong>매치 ID:</strong> {singleAnalysisResult.analysisRecord.matchId}</p>
-                          {singleAnalysisResult.analysisRecord.targetChampion && (
-                            <p><strong>사용 챔피언:</strong> {singleAnalysisResult.analysisRecord.targetChampion}</p>
-                          )}
-                          {singleAnalysisResult.analysisRecord.gameMode && (
-                            <p><strong>게임 모드:</strong> {singleAnalysisResult.analysisRecord.gameMode}</p>
-                          )}
-                          {singleAnalysisResult.analysisRecord.matchDuration && (
-                            <p><strong>게임 시간:</strong> {Math.floor(singleAnalysisResult.analysisRecord.matchDuration / 60)}분 {singleAnalysisResult.analysisRecord.matchDuration % 60}초</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p><strong>상태:</strong> <span className="text-green-600">{singleAnalysisResult.analysisRecord.status}</span></p>
-                          <p><strong>분석 완료:</strong> {new Date(singleAnalysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <strong>분석 결과:</strong>
-                        <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
-                          <div className="prose prose-sm max-w-none">
-                            <ReactMarkdown>
-                              {singleAnalysisResult.analysisRecord.aiResponseData?.analysisResult ||
-                               singleAnalysisResult.analysisRecord.analysisSummary}
-                            </ReactMarkdown>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Multiple Game Analysis Result */}
-            {multipleAnalysisResult && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-green-700">5게임 종합 분석 결과</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-green-50 border border-green-200 p-4 rounded">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p><strong>플레이어:</strong> {multipleAnalysisResult.analysisRecord.targetPlayerName}</p>
-                          <p><strong>분석 기간:</strong> {multipleAnalysisResult.analysisRecord.analysisPeriod}</p>
-                          <p><strong>분석된 게임 수:</strong> {multipleAnalysisResult.analysisRecord.matchCount}개</p>
-                          <p><strong>총 조회된 게임:</strong> {multipleAnalysisResult.analysisRecord.totalGamesFound}개</p>
-                        </div>
-                        <div className="text-right">
-                          <p><strong>상태:</strong> <span className="text-green-600">{multipleAnalysisResult.analysisRecord.status}</span></p>
-                          <p><strong>분석 완료:</strong> {new Date(multipleAnalysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <strong>분석된 매치 ID 목록:</strong>
-                        <div className="bg-white p-3 rounded border mt-2">
-                          <div className="flex flex-wrap gap-2">
-                            {multipleAnalysisResult.analysisRecord.analyzedMatchIds.map((matchId, index) => (
-                              <span key={index} className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-                                {matchId}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <strong>종합 분석 결과:</strong>
-                        <div className="bg-white p-4 rounded border mt-2 min-h-32 max-h-none w-full">
-                          <div className="prose prose-sm max-w-none">
-                            <ReactMarkdown>
-                              {multipleAnalysisResult.analysisRecord.aiResponseData?.analysisResult ||
-                               multipleAnalysisResult.analysisRecord.analysisSummary}
-                            </ReactMarkdown>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* New Analysis Button */}
-            <div className="text-center">
-              <Button
-                onClick={resetToStart}
-                className="bg-blue-600 text-white hover:bg-blue-700 font-bold px-10 py-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 text-lg"
-              >
-                새로운 분석 시작
-              </Button>
-            </div>
-          </div>
-        )}
 
         {/* Analysis Types - Only show when in input step */}
         {analysisStep === "input" && (

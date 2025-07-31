@@ -17,7 +17,14 @@
       "WebFetch(domain:developer.riotgames.com)",
       "WebFetch(domain:riot-api-libraries.readthedocs.io)",
       "Bash(java:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(docker run:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install)",
+      "Bash(docker:*)",
+      "Bash(node:*)",
+      "Bash(npm:*)"
     ],
     "deny": []
   }

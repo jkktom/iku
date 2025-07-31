@@ -36,39 +36,8 @@ public class DuoAnalysisPrompt {
         prompt.append("=== 매치 정보 ===\n");
         prompt.append("매치 ID: ").append(matchId).append("\n");
         prompt.append("플레이어 1: ").append(player1Name).append("#").append(player1Tag);
-        
-        // 플레이어 1 랭크 정보 추가 (주석 처리)
-        /*
-        if (player1RiotInfo != null) {
-            String soloTier = (String) player1RiotInfo.get("soloTier");
-            String soloRank = (String) player1RiotInfo.get("soloRankDivision");
-            prompt.append(" (솔로랭크: ");
-            if (soloTier != null && soloRank != null) {
-                prompt.append(soloTier).append(" ").append(soloRank);
-            } else {
-                prompt.append("언랭크");
-            }
-            prompt.append(")");
-        }
-        */
         prompt.append("\n");
-        
         prompt.append("플레이어 2: ").append(player2Name).append("#").append(player2Tag);
-        
-        // 플레이어 2 랭크 정보 추가 (주석 처리)
-        /*
-        if (player2RiotInfo != null) {
-            String soloTier = (String) player2RiotInfo.get("soloTier");
-            String soloRank = (String) player2RiotInfo.get("soloRankDivision");
-            prompt.append(" (솔로랭크: ");
-            if (soloTier != null && soloRank != null) {
-                prompt.append(soloTier).append(" ").append(soloRank);
-            } else {
-                prompt.append("언랭크");
-            }
-            prompt.append(")");
-        }
-        */
         prompt.append("\n\n");
 
         // 게임 결과
@@ -84,7 +53,7 @@ public class DuoAnalysisPrompt {
         prompt.append(buildPositionAnalysis(player1Data, player2Data, player1Name, player2Name));
 
         // 분석 프레임워크 요청
-        prompt.append(buildAnalysisFramework());
+        prompt.append(buildAnalysisFramework(player1Name, player1Tag, player2Name, player2Tag));
 
         return prompt.toString();
     }
@@ -123,14 +92,6 @@ public class DuoAnalysisPrompt {
         comparison.append(buildIndividualStats(player2Data, player2Name, "플레이어 2"));
         comparison.append("\n");
 
-        // 핵심 지표 비교
-        comparison.append(buildKeyMetricsComparison(player1Data, player2Data));
-        comparison.append("\n");
-        
-        // 고급 분석 데이터 비교
-        comparison.append(buildAdvancedAnalysisComparison(player1Data, player2Data));
-        comparison.append("\n");
-
         return comparison.toString();
     }
 
@@ -152,133 +113,8 @@ public class DuoAnalysisPrompt {
         stats.append("  - CS: ").append(finalStats.get("totalCS")).append("\n");
         stats.append("  - 골드: ").append(String.format("%,d", (Integer)finalStats.get("goldEarned"))).append("\n");
         stats.append("  - 딜량: ").append(String.format("%,d", (Integer)finalStats.get("damageDealt"))).append("\n");
-        stats.append("  - 받은 피해: ").append(String.format("%,d", (Integer)finalStats.get("damageTaken"))).append("\n");
-        stats.append("  - 시야점수: ").append(finalStats.get("visionScore")).append("\n");
-        
-        // 세부 피해량 분석
-        if (finalStats.get("magicDamage") != null) {
-            stats.append("  - 세부 딜량: 마법 ").append(String.format("%,d", (Integer)finalStats.get("magicDamage")))
-                  .append(", 물리 ").append(String.format("%,d", (Integer)finalStats.get("physicalDamage")))
-                  .append(", 고정 ").append(String.format("%,d", (Integer)finalStats.get("trueDamage"))).append("\n");
-        }
-        
-        // 와드 정보
-        if (finalStats.get("wardsPlaced") != null) {
-            stats.append("  - 와드: 설치 ").append(finalStats.get("wardsPlaced"))
-                  .append(", 제거 ").append(finalStats.get("wardsKilled"))
-                  .append(", 제어와드 ").append(finalStats.get("controlWardsPlaced")).append("\n");
-        }
-        
-        // 핑 데이터 (소통 분석)
-        @SuppressWarnings("unchecked")
-        Map<String, Object> pingData = (Map<String, Object>) playerData.get("pingData");
-        if (pingData != null) {
-            stats.append("  - 소통 핑: 총 ").append(pingData.get("totalPings")).append("회");
-            if ((Integer)pingData.get("totalPings") > 0) {
-                stats.append(" (위험알림 ").append(pingData.get("dangerPings"))
-                      .append(", 도움요청 ").append(pingData.get("assistMePings"))
-                      .append(", 적실종 ").append(pingData.get("enemyMissingPings")).append(")");
-            }
-        }
 
         return stats.toString();
-    }
-
-    /**
-     * 핵심 지표 비교 구성
-     */
-    private String buildKeyMetricsComparison(Map<String, Object> player1Data, Map<String, Object> player2Data) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> p1Stats = (Map<String, Object>) player1Data.get("finalStats");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> p2Stats = (Map<String, Object>) player2Data.get("finalStats");
-
-        StringBuilder comparison = new StringBuilder();
-        comparison.append("=== 핵심 지표 비교 ===\n");
-
-        // KDA 비교
-        double p1KDA = calculateKDA(p1Stats);
-        double p2KDA = calculateKDA(p2Stats);
-        comparison.append("KDA 비교: ").append(String.format("%.2f", p1KDA))
-                .append(" vs ").append(String.format("%.2f", p2KDA))
-                .append(" (차이: ").append(String.format("%.2f", Math.abs(p1KDA - p2KDA))).append(")\n");
-
-        // 골드 효율성 비교
-        int p1Gold = (Integer) p1Stats.get("goldEarned");
-        int p2Gold = (Integer) p2Stats.get("goldEarned");
-        comparison.append("골드 획득: ").append(String.format("%,d", p1Gold))
-                .append(" vs ").append(String.format("%,d", p2Gold))
-                .append(" (차이: ").append(String.format("%,d", Math.abs(p1Gold - p2Gold))).append(")\n");
-
-        // 딜량 비교
-        int p1Damage = (Integer) p1Stats.get("damageDealt");
-        int p2Damage = (Integer) p2Stats.get("damageDealt");
-        comparison.append("딜량: ").append(String.format("%,d", p1Damage))
-                .append(" vs ").append(String.format("%,d", p2Damage))
-                .append(" (차이: ").append(String.format("%,d", Math.abs(p1Damage - p2Damage))).append(")\n");
-
-        return comparison.toString();
-    }
-    
-    /**
-     * 고급 분석 데이터 비교 구성
-     */
-    private String buildAdvancedAnalysisComparison(Map<String, Object> player1Data, Map<String, Object> player2Data) {
-        StringBuilder comparison = new StringBuilder();
-        comparison.append("=== 고급 분석 데이터 비교 ===\n");
-        
-        // 고급 전투 분석
-        @SuppressWarnings("unchecked")
-        Map<String, Object> p1Combat = (Map<String, Object>) player1Data.get("advancedCombat");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> p2Combat = (Map<String, Object>) player2Data.get("advancedVision");
-        
-        if (p1Combat != null && p2Combat != null) {
-            comparison.append("전투 효율성 분석 데이터 포함\n");
-        }
-        
-        // 고급 시야 분석
-        @SuppressWarnings("unchecked")
-        Map<String, Object> p1Vision = (Map<String, Object>) player1Data.get("advancedVision");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> p2Vision = (Map<String, Object>) player2Data.get("advancedVision");
-        
-        if (p1Vision != null && p2Vision != null) {
-            comparison.append("시야 제어 분석 데이터 포함\n");
-        }
-        
-        // 소통 분석
-        @SuppressWarnings("unchecked")
-        Map<String, Object> p1Comm = (Map<String, Object>) player1Data.get("communicationData");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> p2Comm = (Map<String, Object>) player2Data.get("communicationData");
-        
-        if (p1Comm != null && p2Comm != null) {
-            comparison.append("팀 소통 분석 데이터 포함\n");
-        }
-        
-        // 핑 데이터 비교
-        @SuppressWarnings("unchecked")
-        Map<String, Object> p1Ping = (Map<String, Object>) player1Data.get("pingData");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> p2Ping = (Map<String, Object>) player2Data.get("pingData");
-        
-        if (p1Ping != null && p2Ping != null) {
-            int p1Total = (Integer) p1Ping.get("totalPings");
-            int p2Total = (Integer) p2Ping.get("totalPings");
-            comparison.append("소통 핑 비교: 플레이어1 ").append(p1Total).append("회 vs 플레이어2 ").append(p2Total).append("회\n");
-            
-            // 중요한 핑 비교
-            int p1Danger = (Integer) p1Ping.get("dangerPings");
-            int p2Danger = (Integer) p2Ping.get("dangerPings");
-            int p1Missing = (Integer) p1Ping.get("enemyMissingPings");
-            int p2Missing = (Integer) p2Ping.get("enemyMissingPings");
-            
-            comparison.append("  - 위험 알림: ").append(p1Danger).append(" vs ").append(p2Danger).append("\n");
-            comparison.append("  - 적 실종 알림: ").append(p1Missing).append(" vs ").append(p2Missing).append("\n");
-        }
-        
-        return comparison.toString();
     }
 
     /**
@@ -311,7 +147,6 @@ public class DuoAnalysisPrompt {
         if (events != null && !events.isEmpty()) {
             for (Map<String, Object> event : events) {
                 String description = (String) event.get("description");
-                // 사망 이벤트 강조
                 if (description.contains("사망")) {
                     eventText.append("  ⚠️  ").append(description).append(" (중요 분석 대상)\n");
                 } else {
@@ -356,29 +191,10 @@ public class DuoAnalysisPrompt {
         if (positionAnalysis != null) {
             @SuppressWarnings("unchecked")
             Map<String, Integer> zoneTimeSpent = (Map<String, Integer>) positionAnalysis.get("zoneTimeSpent");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> riskAnalysis = (Map<String, Object>) positionAnalysis.get("riskAnalysis");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> movementPatterns = (Map<String, Object>) positionAnalysis.get("movementPatterns");
-
-            if (zoneTimeSpent != null) {
-                positioning.append("  맵 활동 시간: ");
-                positioning.append("적정글 ").append(zoneTimeSpent.get("enemyJungle")).append("분, ");
-                positioning.append("자정글 ").append(zoneTimeSpent.get("ownJungle")).append("분, ");
-                positioning.append("리버 ").append(zoneTimeSpent.get("river")).append("분\n");
-            }
-
-            if (riskAnalysis != null) {
-                positioning.append("  위험도 분석: ");
-                positioning.append("고위험 ").append(riskAnalysis.get("highRiskPercentage")).append("%, ");
-                positioning.append("안전지역 ").append(riskAnalysis.get("safePercentage")).append("%\n");
-            }
-
-            if (movementPatterns != null) {
-                positioning.append("  이동 패턴: ");
-                positioning.append("로밍 ").append(movementPatterns.get("roamingCount")).append("회, ");
-                positioning.append("기동성 점수 ").append(movementPatterns.get("mobilityScore")).append("\n");
-            }
+            positioning.append("  맵 활동 시간: ");
+            positioning.append("적정글 ").append(zoneTimeSpent.get("enemyJungle")).append("분, ");
+            positioning.append("자정글 ").append(zoneTimeSpent.get("ownJungle")).append("분, ");
+            positioning.append("리버 ").append(zoneTimeSpent.get("river")).append("분\n");
         } else {
             positioning.append("  (포지셔닝 데이터 없음)\n");
         }
@@ -390,124 +206,67 @@ public class DuoAnalysisPrompt {
     /**
      * 분석 프레임워크 요청 섹션 구성
      */
-    private String buildAnalysisFramework() {
+    private String buildAnalysisFramework(String player1Name, String player1Tag, String player2Name, String player2Tag) {
         StringBuilder framework = new StringBuilder();
         framework.append("=== 듀오 분석 프레임워크 (4단계) ===\n");
         framework.append("위의 데이터를 바탕으로 다음 4단계로 분석해주세요:\n\n");
-
-        // 티어별 분석 프레임워크 (주석 처리)
-        /*
-        framework.append("**중요: 두 플레이어의 티어와 포지션, 챔피언을 고려한 맞춤형 분석을 수행하십시오.**\n\n");
-        
-        framework.append("**1단계: 티어별 개별 성과 평가 (Tier-Based Individual Assessment)**\n");
-        framework.append("각 플레이어의 개별 성과를 해당 티어 기준으로 객관적으로 평가하십시오.\n");
-        framework.append("• 각 플레이어의 티어에서 기대되는 성과 대비 달성도\n");
-        framework.append("• 포지션과 챔피언 역할 대비 기대 성과 달성도\n");
-        framework.append("• 게임 단계별 기여도 (초반/중반/후반) - 티어 수준 고려\n");
-        framework.append("• 해당 티어에서 개선이 필요한 약점과 강점\n");
-        framework.append("• 사망 패턴 분석 및 포지셔닝 평가 (티어별 기대 수준 반영)\n\n");
-
-        framework.append("**2단계: 티어 격차 고려 듀오 시너지 분석 (Tier-Aware Duo Synergy)**\n");
-        framework.append("두 플레이어의 티어 차이를 고려한 협력과 상호 보완성을 분석하십시오.\n");
-        framework.append("• 포지션별 챔피언 조합의 시너지 효과\n");
-        framework.append("• 티어 차이가 있을 경우, 상위 티어 플레이어의 리드 역할 수행도\n");
-        framework.append("• 각 티어 수준에서 기대되는 역할 분담의 효율성\n");
-        framework.append("• 협력이 잘 이루어진 순간들과 그 이유\n");
-        framework.append("• 티어 차이로 인한 플레이 스타일 불일치 부분\n\n");
-
-        framework.append("**3단계: 티어별 맞춤 개선 방안 (Tier-Specific Improvements)**\n");
-        framework.append("각 플레이어의 티어와 포지션에 맞는 구체적이고 실행 가능한 개선 방안을 제시하십시오.\n");
-        framework.append("• 각 플레이어가 현재 티어에서 다음 티어로 승급하기 위한 개별 개선점\n");
-        framework.append("• 포지션별 특화 개선 방안 (예: 서포터의 로밍 타이밍, ADC의 포지셔닝)\n");
-        framework.append("• 듀오 협력 향상을 위한 구체적 방법 (티어 수준 고려)\n");
-        framework.append("• 다음 게임에서 집중해야 할 핵심 포인트 (각 티어별 우선순위)\n");
-        framework.append("• 장기적인 듀오 발전 방향 (티어 승급 목표 포함)\n\n");
-
-        framework.append("**4단계: 티어별 종합 평가 및 권장사항 (Tier-Based Assessment)**\n");
-        framework.append("각 플레이어의 티어를 고려한 듀오 플레이 종합 평가를 제공하십시오.\n");
-        framework.append("• 각 플레이어의 티어 내 실력 수준 평가 (상위/중위/하위)\n");
-        framework.append("• 전체적인 듀오 플레이 등급 (티어 고려)\n");
-        framework.append("• 이 듀o 조합의 잠재력과 한계 (티어 차이 고려)\n");
-        framework.append("• 각 티어에서 승률을 높이기 위한 추천 챔피언 조합\n");
-        framework.append("• 티어별 단계별 성장 로드맵 (단기/중기/장기)\n\n");
-        */
-        
-        // 일반적인 분석 프레임워크 (티어 무관)
-        framework.append("**중요: 두 플레이어의 포지션과 챔피언을 고려한 맞춤형 분석을 수행하십시오.**\n\n");
         
         framework.append("**1단계: 개별 성과 평가 (Individual Assessment)**\n");
         framework.append("각 플레이어의 개별 성과를 객관적으로 평가하십시오.\n");
-        framework.append("• 포지션과 챔피언 역할 대비 기대 성과 달성도\n");
-        framework.append("• 게임 단계별 기여도 (초반/중반/후반)\n");
-        framework.append("• 개선이 필요한 약점과 강점\n");
-        framework.append("• 사망 패턴 분석 및 포지셔닝 평가\n\n");
 
         framework.append("**2단계: 듀오 시너지 분석 (Duo Synergy)**\n");
         framework.append("두 플레이어의 협력과 상호 보완성을 분석하십시오.\n");
-        framework.append("• 포지션별 챔피언 조합의 시너지 효과\n");
-        framework.append("• 역할 분담의 효율성\n");
-        framework.append("• 협력이 잘 이루어진 순간들과 그 이유\n");
-        framework.append("• 플레이 스타일 불일치 부분\n\n");
 
         framework.append("**3단계: 맞춤 개선 방안 (Specific Improvements)**\n");
-        framework.append("각 플레이어의 포지션에 맞는 구체적이고 실행 가능한 개선 방안을 제시하십시오.\n");
-        framework.append("• 개별 플레이어의 개선점\n");
-        framework.append("• 포지션별 특화 개선 방안 (예: 서포터의 로밍 타이밍, ADC의 포지셔닝)\n");
-        framework.append("• 듀오 협력 향상을 위한 구체적 방법\n");
-        framework.append("• 다음 게임에서 집중해야 할 핵심 포인트\n");
-        framework.append("• 장기적인 듀오 발전 방향\n\n");
+        framework.append("각 플레이어와 듀오를 위한 구체적인 개선 방안을 제시하십시오.\n");
 
-        framework.append("**4단계: 종합 평가 및 MVP/최고 선전 플레이어 선정 (Overall Assessment & MVP Selection)**\n");
-        framework.append("듀오 플레이 종합 평가를 제공하십시오.\n");
-        framework.append("• 각 플레이어의 실력 수준 평가\n");
-        framework.append("• 전체적인 듀오 플레이 등급\n");
-        framework.append("• 이 듀오 조합의 잠재력과 한계\n");
-        framework.append("• 승률을 높이기 위한 추천 챔피언 조합\n");
-        framework.append("• 단계별 성장 로드맵 (단기/중기/장기)\n\n");
-        
-        framework.append("**🏆 특별 섹션: 이번 게임의 결정적 플레이어 선정**\n");
-        framework.append("위의 모든 데이터를 바탕으로 나와 내 친구 중 '가장 결정적인 영향을 미친 플레이어' 한 명을 선정해주세요:\n\n");
-        framework.append("• **게임 결과가 '승리'였다면**: '이번 게임의 MVP'로 선정하고 승리의 핵심 요인을 짚어주세요.\n");
-        framework.append("• **게임 결과가 '패배'였다면**: '졌지만 가장 잘 싸운 플레이어'로 선정하고 어려운 상황 속에서도 빛났던 점을 칭찬해주세요.\n\n");
-        framework.append("**선정 기준:**\n");
-        framework.append("• 단순 KDA나 딜량이 아닌 게임 흐름에 미친 실질적 영향력\n");
-        framework.append("• 중요한 순간의 의사결정과 플레이 퀄리티\n");
-        framework.append("• 팀원을 도우며 보여준 협력과 희생정신\n");
-        framework.append("• 포지션 역할 수행도와 상황 대응력\n\n");
-        framework.append("**발표 스타일:**\n");
-        framework.append("• 친구와 함께 볼 때 재미있도록 재치있게 설명\n");
-        framework.append("• 구체적인 데이터와 상황을 근거로 제시\n");
-        framework.append("• 선정되지 않은 플레이어도 격려하는 따뜻한 톤\n");
-        framework.append("• 다음 게임에서의 기대감을 높이는 마무리\n\n");
+        framework.append("**4단계: 종합 평가 및 MVP 선정**\n");
+        framework.append("듀오 플레이를 종합적으로 평가하고 MVP를 선정해주세요.\n");
 
-        framework.append("**중요 지침:**\n");
-        framework.append("• 수치 데이터와 구체적인 게임 상황을 근거로 분석\n");
-        // framework.append("• 각 플레이어의 티어 수준에 맞는 현실적이고 달성 가능한 목표 설정\n");
-        framework.append("• 현실적이고 달성 가능한 목표 설정\n");
-        framework.append("• 비판적이되 건설적인 피드백 제공\n");
-        // framework.append("• 즉시 적용 가능한 실용적 조언 우선 (티어별 우선순위 고려)\n");
-        framework.append("• 즉시 적용 가능한 실용적 조언 우선\n");
-        framework.append("• 두 플레이어 모두에게 균형 잡힌 관점 제시\n");
-        // framework.append("• 티어 차이가 있을 경우, 각자의 성장 단계에 맞는 개별 조언 제공\n");
-        framework.append("• 세부 피해량(마법/물리/고정) 비율을 통한 플레이 스타일 분석 활용\n");
-        framework.append("• 와드 설치/제거 데이터로 시야 제어 능력 평가\n");
-        framework.append("• 핑 사용량과 종류로 팀 소통 및 게임 이해도 분석\n");
-        framework.append("• 포지셔닝 데이터(맵 활동, 위험도)를 바탕으로 한 구체적 개선점 제시\n\n");
+        framework.append("=== 최종 출력 형식 ===\n");
+        framework.append("분석이 끝나면, 최종 결과를 다음 두 가지 형식으로 나누어 제공해주세요:\n");
+        framework.append("1. **JSON 데이터**: 분석 내용을 아래의 정해진 JSON 구조에 맞춰 정리해주세요. 이 데이터는 시스템에서 직접 사용됩니다.\n");
+        framework.append("2. **친근한 피드백 (텍스트)**: 위 JSON 데이터를 바탕으로, 플레이어에게 직접 코칭하듯이 친근하고 이해하기 쉬운 말투로 피드백을 작성해주세요. 이 피드백은 \'원본 AI 리포트 보기\' 기능에 사용됩니다. 칭찬과 격려를 섞어 동기를 부여하는 톤을 유지해주세요.\n\n");
+
+        framework.append("**듀오 분석용 JSON 형식:**\n");
+        framework.append("```json\n");
+        framework.append("{\n");
+        framework.append("  \"matchInfo\": {\n");
+        framework.append("    \"gameResult\": \"승리 또는 패배\",\n");
+        framework.append("    \"gameDuration\": \"게임 시간 (예: 30분 15초)\"\n");
+        framework.append("  },\n");
+        framework.append("  \"playerComparison\": {\n");
+        framework.append("    \"player1\": {\n");
+        framework.append("      \"name\": \"").append(player1Name).append("#").append(player1Tag).append("\",\n");
+        framework.append("      \"champion\": \"챔피언명\",\n");
+        framework.append("      \"kda\": \"K/D/A\",\n");
+        framework.append("      \"damage\": 0,\n");
+        framework.append("      \"gold\": 0\n");
+        framework.append("    },\n");
+        framework.append("    \"player2\": {\n");
+        framework.append("      \"name\": \"").append(player2Name).append("#").append(player2Tag).append("\",\n");
+        framework.append("      \"champion\": \"챔피언명\",\n");
+        framework.append("      \"kda\": \"K/D/A\",\n");
+        framework.append("      \"damage\": 0,\n");
+        framework.append("      \"gold\": 0\n");
+        framework.append("    }\n");
+        framework.append("  },\n");
+        framework.append("  \"synergyAnalysis\": {\n");
+        framework.append("    \"strengths\": [\"시너지 강점 1\", \"시너지 강점 2\"],\n");
+        framework.append("    \"weaknesses\": [\"시너지 약점 1\", \"시너지 약점 2\"]\n");
+        framework.append("  },\n");
+        framework.append("  \"improvementPoints\": {\n");
+        framework.append("    \"forPlayer1\": [\"플레이어1 개선점 1\", \"플레이어1 개선점 2\"],\n");
+        framework.append("    \"forPlayer2\": [\"플레이어2 개선점 1\", \"플레이어2 개선점 2\"],\n");
+        framework.append("    \"forDuo\": [\"듀오 개선점 1\", \"듀오 개선점 2\"]\n");
+        framework.append("  },\n");
+        framework.append("  \"mvp\": {\n");
+        framework.append("    \"playerName\": \"선정된 플레이어 이름\",\n");
+        framework.append("    \"reason\": \"선정 이유\"\n");
+        framework.append("  }\n");
+        framework.append("}\n");
+        framework.append("```\n");
 
         return framework.toString();
-    }
-
-    /**
-     * KDA 계산 헬퍼 메서드
-     */
-    private double calculateKDA(Map<String, Object> stats) {
-        int kills = (Integer) stats.get("kills");
-        int deaths = (Integer) stats.get("deaths");
-        int assists = (Integer) stats.get("assists");
-
-        if (deaths == 0) {
-            return kills + assists;
-        }
-        return (double) (kills + assists) / deaths;
     }
 }

@@ -226,10 +226,13 @@ public class GameAnalysisService {
             String comprehensiveFeedback = geminiService.sendMessage(multipleAnalysisPrompt);
             System.out.println("Gemini AI 분석 완료: " + (System.currentTimeMillis() - geminiStartTime) + "ms");
             
+            // JSON 응답 검증 및 처리
+            String processedFeedback = validateAndProcessJsonResponse(comprehensiveFeedback, "다중 매치 분석");
+            
             long totalTime = System.currentTimeMillis() - startTime;
             System.out.println("=== 다중 매치 종합 분석 완료 ===");
             System.out.println("전체 소요 시간: " + totalTime + "ms (" + (totalTime/1000.0) + "초)");
-            return comprehensiveFeedback;
+            return processedFeedback;
             
         } catch (Exception e) {
             System.err.println("다중 매치 분석 중 오류: " + e.getMessage());
@@ -282,8 +285,11 @@ public class GameAnalysisService {
             System.out.println("Gemini AI 분석 요청 중...");
             String feedback = geminiService.sendMessage(analysisPrompt);
             
+            // JSON 응답 검증 및 처리
+            String processedFeedback = validateAndProcessJsonResponse(feedback, "단일 매치 분석");
+            
             System.out.println("=== 개인 매치 분석 완료 ===");
-            return feedback;
+            return processedFeedback;
             
         } catch (Exception e) {
             System.err.println("개인 매치 분석 중 오류: " + e.getMessage());
@@ -796,8 +802,60 @@ public class GameAnalysisService {
         prompt.append("• 다음 10게임에서 집중할 핵심 3가지\n");
         prompt.append("• 1개월 후 달성 가능한 구체적 목표 (KDA, 승률, 특정 스킬 개선 등)\n\n");
 
-        prompt.append("**중요: 반드시 사망 이벤트를 중심으로 한 위치 기반 분석을 우선시하고, **");
-        prompt.append("표면적인 통계보다는 '왜 그런 플레이를 했는가'에 대한 심층적 통찰을 제공하십시오.**");
+        // JSON 구조화 응답 요청
+        prompt.append("\n\n=== 응답 형식 요구 사항 ===\n");
+        prompt.append("분석 결과를 반드시 아래 JSON 형식으로만 응답해주세요. 다른 텍스트는 포함하지 마세요:\n\n");
+        prompt.append("{\n");
+        prompt.append("  \"playerOverview\": {\n");
+        prompt.append("    \"name\": \"").append(gameName).append("#").append(tagLine).append("\",\n");
+        prompt.append("    \"currentTier\": \"분석된 현재 실력 수준\",\n");
+        prompt.append("    \"kda\": \"").append(String.format("%.1f", (double) totalKills / totalDeaths)).append("\",\n");
+        prompt.append("    \"winRate\": \"").append(String.format("%.0f", (wins * 100.0) / allMatchData.size())).append("%\",\n");
+        prompt.append("    \"gamesAnalyzed\": ").append(allMatchData.size()).append("\n");
+        prompt.append("  },\n");
+        prompt.append("  \"criticalMoments\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"game\": 게임번호,\n");
+        prompt.append("      \"time\": \"시간(예: 11분)\",\n");
+        prompt.append("      \"champion\": \"챔피언명\",\n");
+        prompt.append("      \"situation\": \"상황설명\",\n");
+        prompt.append("      \"mistake\": \"실수내용\",\n");
+        prompt.append("      \"impact\": \"critical\" 또는 \"high\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ],\n");
+        prompt.append("  \"psychologyInsights\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"pattern\": \"패턴명\",\n");
+        prompt.append("      \"description\": \"설명\",\n");
+        prompt.append("      \"frequency\": \"높음\" 또는 \"중간\" 또는 \"낮음\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ],\n");
+        prompt.append("  \"actionPlans\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"title\": \"액션플랜 제목\",\n");
+        prompt.append("      \"description\": \"설명\",\n");
+        prompt.append("      \"when\": \"언제 적용할지\",\n");
+        prompt.append("      \"how\": \"구체적인 실행 방법\",\n");
+        prompt.append("      \"priority\": \"높음\" 또는 \"중간\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ],\n");
+        prompt.append("  \"roadmapGoals\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"category\": \"카테고리\",\n");
+        prompt.append("      \"target\": \"달성 목표\",\n");
+        prompt.append("      \"timeframe\": \"달성 기간\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ]\n");
+        prompt.append("}\n\n");
+        
+        prompt.append("**중요사항:**\n");
+        prompt.append("1. 위 JSON 형식을 정확히 따라주세요.\n");
+        prompt.append("2. criticalMoments는 최소 3개, 최대 5개 포함해주세요.\n");
+        prompt.append("3. psychologyInsights는 3개 포함해주세요.\n");
+        prompt.append("4. actionPlans는 3개 포함해주세요.\n");
+        prompt.append("5. roadmapGoals는 6개 포함해주세요.\n");
+        prompt.append("6. 모든 문자열 값은 따옴표로 감싸주세요.\n");
+        prompt.append("7. JSON 외의 다른 텍스트는 절대 포함하지 마세요.\n");
 
         return prompt.toString();
     }
@@ -914,7 +972,61 @@ public class GameAnalysisService {
         if (opponent != null) {
             prompt.append("포지션 상대와의 비교를 통해 개선점을 구체적으로 제시해주세요.\n");
         }
-        prompt.append("전체적인 평가와 함께 가장 개선이 필요한 부분을 우선순위로 제시해주세요.");
+        // JSON 구조화 응답 요청
+        prompt.append("\n\n=== 응답 형식 요구 사항 ===\n");
+        prompt.append("분석 결과를 반드시 아래 JSON 형식으로만 응답해주세요. 다른 텍스트는 포함하지 마세요:\n\n");
+        prompt.append("{\n");
+        prompt.append("  \"playerOverview\": {\n");
+        prompt.append("    \"name\": \"").append(playerInfo.get("summonerName")).append("\",\n");
+        prompt.append("    \"currentTier\": \"분석된 현재 실력 수준\",\n");
+        String kda = finalStats.get("kills") + "/" + finalStats.get("deaths") + "/" + finalStats.get("assists");
+        prompt.append("    \"kda\": \"").append(kda).append("\",\n");
+        prompt.append("    \"winRate\": \"").append(playerInfo.get("result")).append("\",\n");
+        prompt.append("    \"gamesAnalyzed\": 1\n");
+        prompt.append("  },\n");
+        prompt.append("  \"criticalMoments\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"game\": 1,\n");
+        prompt.append("      \"time\": \"시간(예: 11분)\",\n");
+        prompt.append("      \"champion\": \"").append(playerInfo.get("championName")).append("\",\n");
+        prompt.append("      \"situation\": \"상황설명\",\n");
+        prompt.append("      \"mistake\": \"실수내용\",\n");
+        prompt.append("      \"impact\": \"critical\" 또는 \"high\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ],\n");
+        prompt.append("  \"psychologyInsights\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"pattern\": \"패턴명\",\n");
+        prompt.append("      \"description\": \"설명\",\n");
+        prompt.append("      \"frequency\": \"높음\" 또는 \"중간\" 또는 \"낮음\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ],\n");
+        prompt.append("  \"actionPlans\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"title\": \"액션플랜 제목\",\n");
+        prompt.append("      \"description\": \"설명\",\n");
+        prompt.append("      \"when\": \"언제 적용할지\",\n");
+        prompt.append("      \"how\": \"구체적인 실행 방법\",\n");
+        prompt.append("      \"priority\": \"높음\" 또는 \"중간\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ],\n");
+        prompt.append("  \"roadmapGoals\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"category\": \"카테고리\",\n");
+        prompt.append("      \"target\": \"달성 목표\",\n");
+        prompt.append("      \"timeframe\": \"달성 기간\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ]\n");
+        prompt.append("}\n\n");
+        
+        prompt.append("**중요사항:**\n");
+        prompt.append("1. 위 JSON 형식을 정확히 따라주세요.\n");
+        prompt.append("2. criticalMoments는 이 게임에서의 핵심 실수 2-3개를 포함해주세요.\n");
+        prompt.append("3. psychologyInsights는 3개 포함해주세요.\n");
+        prompt.append("4. actionPlans는 3개 포함해주세요.\n");
+        prompt.append("5. roadmapGoals는 6개 포함해주세요.\n");
+        prompt.append("6. 모든 문자열 값은 따옴표로 감싸주세요.\n");
+        prompt.append("7. JSON 외의 다른 텍스트는 절대 포함하지 마세요.\n");
 
         return prompt.toString();
     }
@@ -1255,7 +1367,7 @@ public class GameAnalysisService {
             String feedback = geminiService.sendMessage(analysisPrompt);
 
             System.out.println("=== 듀오 매치 비교 분석 완료 ===");
-            return feedback;
+            return validateAndProcessJsonResponse(feedback, "듀오 매치 분석");
 
         } catch (Exception e) {
             String errorMessage = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -1311,7 +1423,7 @@ public class GameAnalysisService {
             String feedback = geminiService.sendMessage(analysisPrompt);
 
             System.out.println("=== 듀오 매치 비교 분석 완료 (데이터 직접 전달) ===");
-            return feedback;
+            return validateAndProcessJsonResponse(feedback, "듀오 매치 분석");
 
         } catch (Exception e) {
             String errorMessage = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -1726,5 +1838,86 @@ public class GameAnalysisService {
         
         return "맵 중앙";
     }
+    
+    /**
+     * JSON 응답 검증 및 처리
+     */
+    private String validateAndProcessJsonResponse(String geminiResponse, String analysisType) {
+        if (geminiResponse == null || geminiResponse.trim().isEmpty()) {
+            return createErrorResponse(analysisType + " - Gemini 응답이 비어있습니다.", "");
+        }
 
+        try {
+            String jsonPart = extractJsonPart(geminiResponse);
+            String textPart = extractTextPart(geminiResponse, jsonPart);
+
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode jsonNode = null;
+
+            if (jsonPart != null) {
+                try {
+                    jsonNode = mapper.readTree(jsonPart);
+                } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                    // JSON 파싱 실패 시, 텍스트 부분에 전체 응답을 넣고 에러 로그를 남김
+                    System.err.println(analysisType + " - JSON 파싱 실패: " + e.getMessage());
+                    textPart = geminiResponse; // 전체 응답을 텍스트로 처리
+                }
+            }
+
+            // 최종 응답 객체 생성
+            Map<String, Object> finalResponse = new HashMap<>();
+            finalResponse.put("analysisResult", jsonNode); // 파싱 성공 시 JsonNode, 실패 시 null
+            finalResponse.put("analysisFeedback", textPart); // 텍스트 피드백
+
+            return mapper.writeValueAsString(finalResponse);
+            
+        } catch (Exception e) {
+            System.err.println(analysisType + " - 최종 응답 생성 실패: " + e.getMessage());
+            return createErrorResponse(analysisType + " 분석 중 오류가 발생했습니다.", geminiResponse);
+        }
+    }
+
+    private String extractJsonPart(String response) {
+        // 1. Try to find markdown block first
+        final String markdownStart = "```json";
+        final String markdownEnd = "```";
+
+        int startIndex = response.indexOf(markdownStart);
+        if (startIndex != -1) {
+            int jsonStartIndex = startIndex + markdownStart.length();
+            int endIndex = response.indexOf(markdownEnd, jsonStartIndex);
+            if (endIndex != -1) {
+                return response.substring(jsonStartIndex, endIndex).trim();
+            }
+        }
+
+        // 2. If no markdown block, find the first '{' and last '}' as a fallback.
+        int firstBrace = response.indexOf('{');
+        int lastBrace = response.lastIndexOf('}');
+        if (firstBrace != -1 && lastBrace > firstBrace) {
+            return response.substring(firstBrace, lastBrace + 1).trim();
+        }
+
+        return null; // No JSON found
+    }
+
+    private String extractTextPart(String response, String jsonPart) {
+        if (jsonPart == null) {
+            return response; // JSON이 없으면 전체를 텍스트로 간주
+        }
+        // JSON 부분을 제외한 나머지 텍스트 추출
+        String text = response.replace(jsonPart, "").replace("```json", "").replace("```", "").trim();
+        return text.isEmpty() ? "별도의 텍스트 피드백이 없습니다." : text;
+    }
+
+    private String createErrorResponse(String errorMessage, String originalResponse) {
+        Map<String, String> errorMap = new HashMap<>();
+        errorMap.put("error", errorMessage);
+        errorMap.put("originalResponse", originalResponse);
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(errorMap);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return "{\"error\": \"오류 응답 생성 실패\"}";
+        }
+    }
 }

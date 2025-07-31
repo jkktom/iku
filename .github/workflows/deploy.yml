@@ -1,0 +1,23 @@
+name: Deploy to Development Server
+
+on:
+  push:
+    branches: [ dev ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to server via SSH
+      run: |
+        echo "🚀 Deploying to development server..."
+        echo "⚠️  Note: This requires manual SSH key setup"
+        echo "📋 Manual deployment command:"
+        echo "   ssh -i ~/iku.pem ubuntu@13.125.59.135 '/home/ubuntu/lightweight-deploy.sh'"
+        echo ""
+        echo "✅ Lightweight deployment script is ready on server!"
+        echo "🔧 To enable automatic deployment, set up GitHub Secrets:"
+        echo "   - SSH_HOST: 13.125.59.135"
+        echo "   - SSH_USERNAME: ubuntu"
+        echo "   - SSH_PRIVATE_KEY: contents of iku.pem file"

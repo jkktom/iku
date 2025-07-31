@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from "@remix-run/react"
 import ReactMarkdown from "react-markdown";
 import { useApi } from '~/utils/api';
 import { Button } from "~/components/ui/button";
@@ -56,6 +57,7 @@ interface CommonMatchResponse {
 
 export default function DuoComparisonPage() {
     const apiFetch = useApi()
+    const navigate = useNavigate()
     const [analysisStep, setAnalysisStep] = useState<"input" | "select" | "analyzing" | "results">("input")
     const [player1, setPlayer1] = useState({ name: '', tag: '' })
     const [player2, setPlayer2] = useState({ name: '', tag: '' })
@@ -75,11 +77,23 @@ export default function DuoComparisonPage() {
         setLoading(true)
         setApiError("")
         try {
+            // 입력값 검증
+            const trimmedPlayer1Name = player1.name.trim()
+            const trimmedPlayer1Tag = player1.tag.trim()
+            const trimmedPlayer2Name = player2.name.trim()
+            const trimmedPlayer2Tag = player2.tag.trim()
+            
+            if (!trimmedPlayer1Name || !trimmedPlayer1Tag || !trimmedPlayer2Name || !trimmedPlayer2Tag) {
+                setApiError('모든 플레이어명과 태그를 입력해주세요.')
+                setLoading(false)
+                return
+            }
+            
             const params = new URLSearchParams({
-                player1Name: player1.name,
-                player1Tag: player1.tag,
-                player2Name: player2.name,
-                player2Tag: player2.tag
+                player1Name: trimmedPlayer1Name,
+                player1Tag: trimmedPlayer1Tag,
+                player2Name: trimmedPlayer2Name,
+                player2Tag: trimmedPlayer2Tag
             });
             const data = await apiFetch(`/api/analysis/duo/common-matches?${params}`)
             setCommonMatches(data.commonMatches || [])
@@ -123,7 +137,14 @@ export default function DuoComparisonPage() {
                 })
             })
             setAnalysisResult(data)
-            setAnalysisStep("results")
+            
+            // 듀오 분석 완료 후 분석 페이지로 리다이렉트
+            navigate('/analysis', {
+                state: {
+                    analysisData: data,
+                    analysisType: 'duo'
+                }
+            })
 
         } catch (error) {
             console.error('분석 실행 중 오류:', String(error))
@@ -404,55 +425,60 @@ export default function DuoComparisonPage() {
                 </Card>
 
                 {/* Results Section */}
-                {analysisStep === "results" && analysisResult && (
-                    <div className="space-y-8">
-                        <Card className="border-0 shadow-2xl backdrop-blur-xl bg-white/80">
-                            <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-100">
-                                <CardTitle className="flex items-center text-2xl">
-                                    <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl flex items-center justify-center mr-4">
-                                        <Trophy className="w-6 h-6 text-white" />
-                                    </div>
-                                    듀오 분석 결과
-                                </CardTitle>
-                                <p className="text-gray-600 font-medium">AI가 분석한 협력 패턴과 개선점</p>
-                            </CardHeader>
-                            <CardContent className="p-8">
-                                <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 p-6 rounded-2xl mb-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div>
-                                            <h4 className="font-bold text-lg text-gray-900 mb-3">매치 정보</h4>
-                                            <div className="space-y-2 text-sm">
-                                                <p><strong>매치 ID:</strong> {analysisResult.analysisRecord.matchId}</p>
-                                                <p><strong>분석 상태:</strong> <span className="text-green-600">{analysisResult.analysisRecord.status}</span></p>
-                                                <p><strong>분석 시간:</strong> {new Date(analysisResult.analysisRecord.createdAt).toLocaleString('ko-KR')}</p>
+                {analysisStep === "results" && analysisResult && (() => {
+                    // 실제 데이터 구조에 맞게 변수 정의
+                    const actualData = analysisResult.analysisRecord.analysisRecord || analysisResult.analysisRecord;
+                    const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleString('ko-KR') : '정보 없음';
+                    
+                    return (
+                        <div className="space-y-8">
+                            <Card className="border-0 shadow-2xl backdrop-blur-xl bg-white/80">
+                                <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-100">
+                                    <CardTitle className="flex items-center text-2xl">
+                                        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl flex items-center justify-center mr-4">
+                                            <Trophy className="w-6 h-6 text-white" />
+                                        </div>
+                                        듀오 분석 결과
+                                    </CardTitle>
+                                    <p className="text-gray-600 font-medium">AI가 분석한 협력 패턴과 개선점</p>
+                                </CardHeader>
+                                <CardContent className="p-8">
+                                    <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 p-6 rounded-2xl mb-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <h4 className="font-bold text-lg text-gray-900 mb-3">매치 정보</h4>
+                                                <div className="space-y-2 text-sm">
+                                                    <p><strong>매치 ID:</strong> {actualData?.matchId || selectedMatch}</p>
+                                                    <p><strong>분석 상태:</strong> <span className="text-green-600">{actualData?.analysisStatus || actualData?.status || 'COMPLETED'}</span></p>
+                                                    <p><strong>분석 시간:</strong> {formatDate(actualData?.createdAt)}</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-lg text-gray-900 mb-3">플레이어 정보</h4>
+                                                <div className="space-y-2 text-sm">
+                                                    <p><strong>플레이어 1:</strong> {actualData?.player1Name || `${player1.name}#${player1.tag}`} ({actualData?.player1Champion || '정보 없음'})</p>
+                                                    <p><strong>플레이어 2:</strong> {actualData?.player2Name || `${player2.name}#${player2.tag}`} ({actualData?.player2Champion || '정보 없음'})</p>
+                                                    <p><strong>업데이트:</strong> {formatDate(actualData?.updatedAt)}</p>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-lg text-gray-900 mb-3">플레이어 정보</h4>
-                                            <div className="space-y-2 text-sm">
-                                                <p><strong>플레이어 1:</strong> {analysisResult.analysisRecord.player1Name} ({analysisResult.analysisRecord.player1Champion})</p>
-                                                <p><strong>플레이어 2:</strong> {analysisResult.analysisRecord.player2Name} ({analysisResult.analysisRecord.player2Champion})</p>
-                                                <p><strong>업데이트:</strong> {new Date(analysisResult.analysisRecord.updatedAt).toLocaleString('ko-KR')}</p>
-                                            </div>
-                                        </div>
                                     </div>
-                                </div>
 
-                                <div>
-                                    <h4 className="font-bold text-xl text-gray-900 mb-4 flex items-center">
-                                        <Brain className="w-6 h-6 mr-3 text-purple-600" />
-                                        AI 듀오 분석 결과
-                                    </h4>
-                                    <div className="bg-white p-6 rounded-2xl border-2 border-gray-100 min-h-32">
-                                        <div className="prose prose-sm max-w-none">
-                                            <ReactMarkdown>
-                                                {analysisResult.analysisRecord.analysisSummary || '분석 결과가 없습니다.'}
-                                            </ReactMarkdown>
+                                    <div>
+                                        <h4 className="font-bold text-xl text-gray-900 mb-4 flex items-center">
+                                            <Brain className="w-6 h-6 mr-3 text-purple-600" />
+                                            AI 듀오 분석 결과
+                                        </h4>
+                                        <div className="bg-white p-6 rounded-2xl border-2 border-gray-100 min-h-32">
+                                            <div className="prose prose-sm max-w-none">
+                                                <ReactMarkdown>
+                                                    {actualData?.analysisSummary || '분석 결과가 없습니다.'}
+                                                </ReactMarkdown>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
 
                         {/* New Analysis Button */}
                         <div className="text-center">
@@ -464,7 +490,8 @@ export default function DuoComparisonPage() {
                             </Button>
                         </div>
                     </div>
-                )}
+                );
+                })()}
 
                 {/* Analysis Features - Only show when in input step */}
                 {analysisStep === "input" && (

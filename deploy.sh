@@ -26,8 +26,8 @@ case $BRANCH in
         # Main 서비스들만 재시작
         docker-compose up -d --build db-main backend-main frontend-main
         echo "✅ Main branch deployed successfully!"
-        echo "🌐 Frontend: http://localhost:3000"
-        echo "🌐 Backend: http://localhost:8080"
+        echo "🌐 Frontend: https://iku.life"
+        echo "🌐 Backend: https://iku.life/api"
         echo "🗃️ Database: localhost:5432"
         ;;
     "dev")
@@ -35,8 +35,8 @@ case $BRANCH in
         # Dev 서비스들만 재시작
         docker-compose up -d --build db-dev backend-dev frontend-dev
         echo "✅ Dev branch deployed successfully!"
-        echo "🌐 Frontend: http://localhost:3001"
-        echo "🌐 Backend: http://localhost:8081"
+        echo "🌐 Frontend: https://iku.life (dev port 3001)"
+        echo "🌐 Backend: https://iku.life/api (dev port 8081)"
         echo "🗃️ Database: localhost:5433"
         ;;
     *)
